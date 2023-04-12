@@ -1,0 +1,2 @@
+/usr/bin/ar qc libAttackingSubsystem.a CMakeFiles/AttackingSubsystem.dir/AttackingSubsystem.cpp.o
+/usr/bin/ranlib libAttackingSubsystem.a

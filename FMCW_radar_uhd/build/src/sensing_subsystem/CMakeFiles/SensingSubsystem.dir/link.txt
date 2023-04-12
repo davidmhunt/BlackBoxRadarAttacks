@@ -1,0 +1,2 @@
+/usr/bin/ar qc libSensingSubsystem.a CMakeFiles/SensingSubsystem.dir/SensingSubsystem.cpp.o
+/usr/bin/ranlib libSensingSubsystem.a

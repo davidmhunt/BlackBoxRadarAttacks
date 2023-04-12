@@ -1,0 +1,2 @@
+/usr/bin/ar qc libRADAR.a CMakeFiles/RADAR.dir/RADAR.cpp.o
+/usr/bin/ranlib libRADAR.a

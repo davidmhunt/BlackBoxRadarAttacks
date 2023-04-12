@@ -1,0 +1,2 @@
+/usr/bin/ar qc libUSRPHandler.a CMakeFiles/USRPHandler.dir/USRPHandler.cpp.o
+/usr/bin/ranlib libUSRPHandler.a

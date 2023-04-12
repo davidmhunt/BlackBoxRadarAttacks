@@ -1,0 +1,21 @@
+{ "TestSettings":
+    {
+        "Configurations": {
+            "user":"david",
+            "json_config": "100MHz.json",
+            "frames_per_sim": 10,
+            "attack_type": "range spoof - similar slope, velocity spoof - noisy",
+            "num_runs": 400,
+            "pre_attack_frames": 5,
+            "k_range" : 6.24,
+            "k_vel" : 0.93,
+            "max_bin": 30,
+            "bin_width": 5,
+            "attack_enable": 1,
+            "set_attack_location": 0,
+            "attack_pos": 75,
+            "attack_velocity": 7
+
+        }
+    }
+}

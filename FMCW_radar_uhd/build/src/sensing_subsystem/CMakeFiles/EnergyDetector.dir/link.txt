@@ -1,0 +1,2 @@
+/usr/bin/ar qc libEnergyDetector.a CMakeFiles/EnergyDetector.dir/EnergyDetector.cpp.o
+/usr/bin/ranlib libEnergyDetector.a
