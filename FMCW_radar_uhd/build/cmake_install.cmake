@@ -1,4 +1,4 @@
-# Install script for directory: /home/david/Documents/RadarSecurityResearch/FMCW_radar_uhd
+# Install script for directory: /home/david/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -44,7 +44,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/david/Documents/RadarSecurityResearch/FMCW_radar_uhd/build/src/cmake_install.cmake")
+  include("/home/david/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd/build/src/cmake_install.cmake")
 
 endif()
 
@@ -56,5 +56,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/david/Documents/RadarSecurityResearch/FMCW_radar_uhd/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/david/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

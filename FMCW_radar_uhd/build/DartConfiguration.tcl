@@ -4,8 +4,8 @@
 
 
 # Configuration directories and files
-SourceDirectory: /home/david/Documents/RadarSecurityResearch/FMCW_radar_uhd
-BuildDirectory: /home/david/Documents/RadarSecurityResearch/FMCW_radar_uhd/build
+SourceDirectory: /home/david/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd
+BuildDirectory: /home/david/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd/build
 
 # Where to place the cost data store
 CostDataFile: 
@@ -26,7 +26,7 @@ SubmitURL: http://
 NightlyStartTime: 00:00:00 EDT
 
 # Commands for the build/test/submit cycle
-ConfigureCommand: "/usr/bin/cmake" "/home/david/Documents/RadarSecurityResearch/FMCW_radar_uhd"
+ConfigureCommand: "/usr/bin/cmake" "/home/david/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd"
 MakeCommand: /usr/bin/cmake --build . --config "${CTEST_CONFIGURATION_TYPE}"
 DefaultCTestConfigurationType: Release
 

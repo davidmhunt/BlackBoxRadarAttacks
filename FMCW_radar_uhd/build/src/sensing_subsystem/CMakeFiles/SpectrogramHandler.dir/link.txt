@@ -1,2 +1,0 @@
-/usr/bin/ar qc libSpectrogramHandler.a CMakeFiles/SpectrogramHandler.dir/SpectrogramHandler.cpp.o
-/usr/bin/ranlib libSpectrogramHandler.a

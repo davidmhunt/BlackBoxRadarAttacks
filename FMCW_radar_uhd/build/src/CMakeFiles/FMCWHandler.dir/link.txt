@@ -1,2 +1,0 @@
-/usr/bin/ar qc libFMCWHandler.a CMakeFiles/FMCWHandler.dir/FMCWHandler.cpp.o
-/usr/bin/ranlib libFMCWHandler.a

@@ -1,4 +1,4 @@
-# Install script for directory: /home/david/Documents/RadarSecurityResearch/FMCW_radar_uhd/src/attacking_subsystem
+# Install script for directory: /home/david/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd/src/attacking_subsystem
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libJSONHandler.a CMakeFiles/JSONHandler.dir/JSONHandler.cpp.o
-/usr/bin/ranlib libJSONHandler.a

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libATTACKER.a CMakeFiles/ATTACKER.dir/Attacker.cpp.o
-/usr/bin/ranlib libATTACKER.a
