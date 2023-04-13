@@ -331,7 +331,7 @@
                     spectrogram_handler.captured_frames.save_to_file();
 
                     //computed victim waveform
-                    path = folder_path + 'cpp_computed_victim_waveform.bin';
+                    path = folder_path + "cpp_computed_victim_waveform.bin";
                     spectrogram_handler.computed_victim_chirp.set_write_file(path,true);
                     spectrogram_handler.computed_victim_chirp.save_to_file();
 
