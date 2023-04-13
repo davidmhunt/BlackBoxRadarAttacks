@@ -12,10 +12,12 @@
     #include <cmath>
     #include <typeinfo>
 
+/*
     //includes for JSON editing
     #include <nlohmann/json.hpp>
 
     using json = nlohmann::json;
+*/
 
     namespace Buffers{
 
@@ -737,8 +739,50 @@
                  * @param debug the desired debug setting
                  */
                 Buffer_1D(size_t samples, bool debug = false) 
-                    : Buffer<data_type>(true,debug),buffer(samples),
+                    : Buffer<data_type>(true,debug),
+                    buffer(samples),
                     num_samples(samples) {}
+
+                /**
+                 * @brief Construct a new Buffer_1D object, initialize with an existing vector
+                 * 
+                 * @param data_to_load reference to vector containing data to load
+                 */
+                Buffer_1D(std::vector<data_type> & data_to_load):
+                    Buffer<data_type>(),
+                    buffer(data_to_load),
+                    num_samples(data_to_load.size())
+                    {}
+                
+                /**
+                 * @brief Construct a new Buffer_1D object- COPY Constructor
+                 * 
+                 * @param rhs reference to existing Buffer_1D object
+                 */
+                Buffer_1D(const Buffer_1D<data_type> & rhs):
+                    Buffer<data_type>(rhs),
+                    buffer(rhs.buffer),
+                    num_samples(rhs.num_samples)
+                    {}
+
+                
+                /**
+                 * @brief Assignment operator
+                 * 
+                 * @param rhs reference to another Buffer_1D class
+                 * @return Buffer_1D& 
+                 */
+                Buffer_1D & operator=(const Buffer_1D<data_type> & rhs){
+                    if(this != & rhs) {
+                        Buffer<data_type>::operator=(rhs);
+
+                        buffer = rhs.buffer;
+                        num_samples = rhs.num_samples;
+                    }
+
+                    return * this;
+                }
+
 
                 /**
                  * @brief Destroy the Buffer_1D object
@@ -782,6 +826,16 @@
                     }
                 }
 
+                
+                void load_data_into_buffer(std::vector<data_type> & data_to_load){
+
+                    //get the number of samples in the data_to_load
+                    num_samples = data_to_load.size(); //rows
+                    
+                    //save the buffer
+                    buffer = data_to_load;
+                }
+                
                 /**
                  * @brief imports data from an already opened read_file_stream and loads it into the buffer,
                  * sets the buffer to be equal to the data in the buffer and sets num_samples to the number

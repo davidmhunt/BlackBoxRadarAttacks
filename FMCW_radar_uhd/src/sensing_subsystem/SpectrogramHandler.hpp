@@ -77,10 +77,13 @@
             double chirp_tracking_average_slope; //in MHz/us
             double chirp_tracking_average_chirp_duration; //in us
             size_t frame_tracking_num_captured_frames;
-            double frame_tracking_average_frame_duration;
-            double frame_tracking_average_chirp_duration;
-            double frame_tracking_average_chirp_slope;
+            double frame_tracking_average_frame_duration_us;
+            double frame_tracking_average_chirp_duration_us;
+            double frame_tracking_average_chirp_slope_MHz_us;
+
+            //status flags
             bool attack_in_progress; //status for if an attack is in progress
+            bool victim_waveform_loaded;
         
         public:
 
@@ -123,6 +126,11 @@
 
                 //buffer for tracking victim frames
                 Buffer_2D<double> captured_frames; //colums as follows: duration, number of chirps, average slope, average chirp duration, start time, next predicted frame start time
+
+                //buffer containing the victim's estimated waveform
+                //TODO: Initialize this from the data
+                Buffer_1D<std::complex<data_type>> computed_victim_chirp;
+
             
             //debug status
             bool debug;
@@ -130,7 +138,7 @@
             //save file path
             std::string save_file_path;
 
-        public:
+        public: //constructors, destructions, and init() function are public
 
             /**
              * @brief Construct a new Spectrogram Handler object - DOES NOT INITIALIZE SPECTROGRAM HANDLER
@@ -179,10 +187,11 @@
                                                                 chirp_tracking_average_slope(rhs.chirp_tracking_average_slope),
                                                                 chirp_tracking_average_chirp_duration(rhs.chirp_tracking_average_chirp_duration),
                                                                 frame_tracking_num_captured_frames(rhs.frame_tracking_num_captured_frames),
-                                                                frame_tracking_average_frame_duration(rhs.frame_tracking_average_frame_duration),
-                                                                frame_tracking_average_chirp_duration(rhs.frame_tracking_average_chirp_duration),
-                                                                frame_tracking_average_chirp_slope(rhs.frame_tracking_average_chirp_slope),
+                                                                frame_tracking_average_frame_duration_us(rhs.frame_tracking_average_frame_duration_us),
+                                                                frame_tracking_average_chirp_duration_us(rhs.frame_tracking_average_chirp_duration_us),
+                                                                frame_tracking_average_chirp_slope_MHz_us(rhs.frame_tracking_average_chirp_slope_MHz_us),
                                                                 attack_in_progress(rhs.attack_in_progress),
+                                                                victim_waveform_loaded(rhs.victim_waveform_loaded),
                                                                 max_frames_to_capture(rhs.max_frames_to_capture),
                                                                 min_frame_periodicity_s(rhs.min_frame_periodicity_s),
                                                                 max_waiting_time(rhs.max_waiting_time),
@@ -199,6 +208,7 @@
                                                                 detected_slopes(rhs.detected_slopes),
                                                                 detected_intercepts(rhs.detected_intercepts),
                                                                 captured_frames(rhs.captured_frames),
+                                                                computed_victim_chirp(rhs.computed_victim_chirp),
                                                                 debug(rhs.debug),
                                                                 save_file_path(rhs.save_file_path)
                                                                 {}
@@ -239,10 +249,11 @@
                     chirp_tracking_average_slope = rhs.chirp_tracking_average_slope;
                     chirp_tracking_average_chirp_duration = rhs.chirp_tracking_average_chirp_duration;
                     frame_tracking_num_captured_frames = rhs.frame_tracking_num_captured_frames;
-                    frame_tracking_average_frame_duration = rhs.frame_tracking_average_frame_duration;
-                    frame_tracking_average_chirp_duration = rhs.frame_tracking_average_chirp_duration;
-                    frame_tracking_average_chirp_slope = rhs.frame_tracking_average_chirp_slope;
+                    frame_tracking_average_frame_duration_us = rhs.frame_tracking_average_frame_duration_us;
+                    frame_tracking_average_chirp_duration_us = rhs.frame_tracking_average_chirp_duration_us;
+                    frame_tracking_average_chirp_slope_MHz_us = rhs.frame_tracking_average_chirp_slope_MHz_us;
                     attack_in_progress = rhs.attack_in_progress;
+                    victim_waveform_loaded = rhs.victim_waveform_loaded;
                     max_frames_to_capture = rhs.max_frames_to_capture;
                     min_frame_periodicity_s = rhs.min_frame_periodicity_s;
                     max_waiting_time = rhs.max_waiting_time;
@@ -259,6 +270,7 @@
                     detected_slopes = rhs.detected_slopes;
                     detected_intercepts = rhs.detected_intercepts;
                     captured_frames = rhs.captured_frames;
+                    computed_victim_chirp = rhs.computed_victim_chirp;
                     debug = rhs.debug;
                     save_file_path = rhs.save_file_path;
                 }
@@ -284,10 +296,13 @@
                     initialize_freq_and_timing_bins();
                     initialize_clustering_params();
                     initialize_chirp_and_frame_tracking();
+                    initialize_precise_timing_estimates();
                     initialize_debug();
                     initialize_save_file_path();
                 }
             }
+
+        private: //functions to support initialization should be private
 
             /**
              * @brief Check the json config file to make sure all necessary parameters are included
@@ -535,9 +550,9 @@
 
                 //frame tracking
                 frame_tracking_num_captured_frames = 0;
-                frame_tracking_average_frame_duration = 0;
-                frame_tracking_average_chirp_duration = 0;
-                frame_tracking_average_chirp_slope = 0;
+                frame_tracking_average_frame_duration_us = 0;
+                frame_tracking_average_chirp_duration_us = 0;
+                frame_tracking_average_chirp_slope_MHz_us = 0;
 
                 //min frame periodicity
                 min_frame_periodicity_s = config["SensingSubsystemSettings"]["min_frame_periodicity_ms"].get<double>() * 1e-3;
@@ -545,6 +560,15 @@
 
                 //set attack in progress status flag
                 attack_in_progress = false;
+            }
+
+            void initialize_precise_timing_estimates(){
+                
+                //set victim_waveform_loaded flag to false
+                victim_waveform_loaded = false;
+
+                //computed chirp vector is already initialized as empty
+                computed_victim_chirp = Buffer_1D<std::complex<data_type>>();
             }
 
             /**
@@ -563,7 +587,9 @@
             void initialize_save_file_path(){
                 save_file_path = config["SensingSubsystemSettings"]["save_file_path"].get<std::string>();
             }
-            
+
+        public: //functions to reset, set detection start times, and process the receive signal are public
+
             /**
              * @brief re-initialize all parameters (used if performing multiple experiments)
              * 
@@ -603,6 +629,8 @@
                 compute_linear_model();
                 compute_victim_parameters();
             }
+
+        private: //functions to support processing the received signal are private
 
             /**
              * @brief Loads a received signal, reshapes, and prepares it 
@@ -908,6 +936,8 @@
                 //increment frame counter
                 frame_tracking_num_captured_frames += 1;
                 
+                //TODO: revise this process to store a series of tracked chirps and frames so as to be able to filter out outliers as needed
+
                 //if an attack is in progress, all chirps except the first chirp are affected by 
                 //interference from the attacker subsystem
                 if(not attack_in_progress)
@@ -943,7 +973,7 @@
                         sum_slopes += captured_frames.buffer[i][2] * (captured_frames.buffer[i][1] - 1);
                         sum_count += captured_frames.buffer[i][1] - 1;
                     }
-                    frame_tracking_average_chirp_slope = sum_slopes/sum_count;
+                    frame_tracking_average_chirp_slope_MHz_us = sum_slopes/sum_count;
                     
                     //compute average chirp duration across all frames
                     double sum_durations = 0; //sum of all average chirp durations
@@ -953,7 +983,7 @@
                         sum_durations += captured_frames.buffer[i][3] * (captured_frames.buffer[i][1] - 1);
                         sum_count += captured_frames.buffer[i][1] - 1;
                     }
-                    frame_tracking_average_chirp_duration = sum_durations/sum_count;
+                    frame_tracking_average_chirp_duration_us = sum_durations/sum_count;
                 }
                 
                 
@@ -971,7 +1001,7 @@
                         - captured_frames.buffer[frame_tracking_num_captured_frames - 2][4];
                     
                     // compute average frame duration
-                    frame_tracking_average_frame_duration = 
+                    frame_tracking_average_frame_duration_us = 
                         (captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] -
                         captured_frames.buffer[0][4])
                         / static_cast<data_type>(frame_tracking_num_captured_frames - 1);
@@ -979,13 +1009,24 @@
                     //predict next frame - predict the time of the second chirp so that the attack doesn't interfere with the 1st chirp
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][5] = 
                         captured_frames.buffer[frame_tracking_num_captured_frames - 1][4]
-                        + 1 * frame_tracking_average_frame_duration + frame_tracking_average_chirp_duration;
+                        + 1 * frame_tracking_average_frame_duration_us + frame_tracking_average_chirp_duration_us;
                 }
                 else
                 {
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][0] = 0;
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][5] = 0;
                 }
+            }
+
+        public: //other useful functions to interface with the spectrogram handler are public
+
+            void load_computed_victim_chirp(std::vector<std::complex<data_type>> & computed_signal){
+                
+                //load the computed signal into the computed_victim_chirp buffer
+                computed_victim_chirp.load_data_into_buffer(computed_signal);
+
+                //set the victim_waveform_loaded flag
+                victim_waveform_loaded = true;
             }
 
             /**
@@ -1006,6 +1047,18 @@
                 return (captured_frames.buffer[frame_tracking_num_captured_frames - 1][5]) * 1e-3;
             }
 
+            double get_average_chirp_duration_us(){
+                return frame_tracking_average_chirp_duration_us;
+            }
+
+            double get_average_chirp_slope_MHz_us(){
+                return frame_tracking_average_chirp_slope_MHz_us;
+            }
+
+            double get_average_frame_duration_ms(){
+                return frame_tracking_average_frame_duration_us * 1e-3;
+            }
+
             /**
              * @brief Set the attack in progress flag (on true, spectrogram handler changes behavior to avoid interference with attacking subsystem)
              * 
@@ -1021,11 +1074,11 @@
              */
             void print_summary_of_estimated_parameters(){
                 std::cout << "SpectrogramHandler::print_summary_of_estimated_parameters: average frame duration: " <<
-                    frame_tracking_average_frame_duration * 1e-3 << "ms" <<std::endl;
+                    frame_tracking_average_frame_duration_us * 1e-3 << "ms" <<std::endl;
                 std::cout << "SpectrogramHandler::print_summary_of_estimated_parameters: average chirp duration: " <<
-                    frame_tracking_average_chirp_duration << "us" <<std::endl;
+                    frame_tracking_average_chirp_duration_us << "us" <<std::endl;
                 std::cout << "SpectrogramHandler::print_summary_of_estimated_parameters: average chirp slope: " <<
-                    frame_tracking_average_chirp_slope << "MHz/us" <<std::endl;
+                    frame_tracking_average_chirp_slope_MHz_us << "MHz/us" <<std::endl;
             }
 
             /**
@@ -1041,9 +1094,9 @@
                 Buffer_1D<double> estimated_parameters(3,false);
                  
                 // save the frame duration, chirp duration, and chirp slope
-                estimated_parameters.buffer[0] = frame_tracking_average_frame_duration * 1e-3; // ms
-                estimated_parameters.buffer[1] = frame_tracking_average_chirp_duration; // us
-                estimated_parameters.buffer[2] = frame_tracking_average_chirp_slope; // MHz/us
+                estimated_parameters.buffer[0] = frame_tracking_average_frame_duration_us * 1e-3; // ms
+                estimated_parameters.buffer[1] = frame_tracking_average_chirp_duration_us; // us
+                estimated_parameters.buffer[2] = frame_tracking_average_chirp_slope_MHz_us; // MHz/us
 
                 //save the results to a file
                 std::string file_name;

@@ -26,6 +26,9 @@
 
             //parameters to use when computing the cross correlation
             Buffer_1D<int> lags;
+
+            //paramet to track the number of delay samples
+            int delay_samples;
         
         private:
             size_t max_lag;
@@ -43,6 +46,7 @@
             CrossCorr(bool enable_normalization = true):
                 result(),
                 lags(),
+                delay_samples(0),
                 max_lag(0),
                 normalize(enable_normalization),
                 initialized(false)
@@ -57,6 +61,7 @@
             CrossCorr(size_t desired_max_lag,bool enable_normalization = true):
                 result((2 * desired_max_lag) + 1),
                 lags((2 * desired_max_lag) + 1),
+                delay_samples(0),
                 max_lag(desired_max_lag),
                 normalize(enable_normalization),
                 initialized(true)
@@ -65,24 +70,26 @@
             }
 
             ~CrossCorr() {};
-
-
+            
             /**
-             * @brief Function to compute the lag values used when computing the cross correlation
-             *  (assumes that max_lag and lags buffer has already been initialized)
+             * @brief Set the max lag value
              * 
+             * @param desired_max_lag desired maximum lag value
              */
-            void compute_lag_values(){
-                
-                int lag = static_cast<int>(max_lag) * -1;
-
-                for (size_t i = 0; i < lags.num_samples; i++)
-                {
-                    lags.buffer[i] = lag;
-                    lag ++;
-                }
+            void set_max_lag(size_t desired_max_lag){
+                max_lag = desired_max_lag;
+                lags.set_buffer_size(max_lag);
+                result.set_buffer_size((2 * max_lag) + 1);
+                compute_lag_values();
+                initialized = true;
             }
 
+            /**
+             * @brief Compute the cross correlation of two input vectors (assumes the vectors are of the same size)
+             * 
+             * @param x complex vector containing samples for x
+             * @param y complex vector containing samples for y
+             */
             void compute(
                 std::vector<std::complex<datatype>> & x,
                 std::vector<std::complex<datatype>> & y)
@@ -115,9 +122,36 @@
                     normalize_result(x,y);
                 }
 
+                compute_delay_samples();
+            }
+
+            /**
+             * @brief Conver the delay in samples to a delay in us using the given sample rate
+             * 
+             * @param sample_rate_MSps sample rate in MSps
+             * @return datatype the delay in us
+             */
+            datatype compute_delay_us(datatype sample_rate_MSps){
+                return static_cast<datatype>(delay_samples) / sample_rate_MSps;
             }
 
         private:
+
+            /**
+             * @brief Function to compute the lag values used when computing the cross correlation
+             *  (assumes that max_lag and lags buffer has already been initialized)
+             * 
+             */
+            void compute_lag_values(){
+                
+                int lag = static_cast<int>(max_lag) * -1;
+
+                for (size_t i = 0; i < lags.num_samples; i++)
+                {
+                    lags.buffer[i] = lag;
+                    lag ++;
+                }
+            }
 
             /**
              * @brief Compute the cross correlation at a single index m
@@ -193,6 +227,28 @@
                     result.buffer[i] = result.buffer[i] * normalization_coefficient;
                 }
             }
+
+            /**
+             * @brief compute the delay in samples after the cross correlation has been performed
+             * 
+             */
+            void compute_delay_samples(){
+
+                datatype max_val = 0;
+                delay_samples = 0;
+
+                //go through the data and look for the larges value in the cross correlation value by absolute value
+                for (size_t i = 0; i < result.num_samples; i++)
+                {
+                    if (std::abs(result.buffer[i]) > max_val)
+                    {
+                        max_val = std::abs(result.buffer[i]);
+                        delay_samples = lags.buffer[i];
+                    }   
+                }
+            }
+
+            
 
         };
     }

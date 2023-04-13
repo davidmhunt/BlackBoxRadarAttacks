@@ -56,9 +56,8 @@
     },
     "AttackSubsystemSettings":{
         "tx_file_name": "/home/david/Documents/MATLAB_generated/MATLAB_attacking_chirps_full.bin",
-        "enabled": true,
+        "enabled": false,
         "num_attack_frames": 10,
-        "attack_start_frame": 10,
-        "estimated_frame_periodicity_ms": 33.3300
+        "attack_start_frame": 10
     }
 }

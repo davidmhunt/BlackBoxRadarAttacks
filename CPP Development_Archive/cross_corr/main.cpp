@@ -42,6 +42,14 @@ int main(int, char**) {
     CrossCorr<float> cross_corr(max_lag,true);
     cross_corr.compute(estimated_chirp.buffer,computed_chirp.buffer);
 
+    //get the delay in samples and the delay in us
+    float sample_rate_MSps = 29.536;
+    int delay_in_samples = cross_corr.delay_samples;
+    float delay_in_us = cross_corr.compute_delay_us(sample_rate_MSps);
+
+    std::cout << "Delay in samples: " << delay_in_samples << std::endl;
+    std::cout << "Delay in us: " << delay_in_us << std::endl;
+
     //save computed cross correlation to a file
     std::string result_path("/home/david/Documents/BlackBoxRadarAttacks/CPP Development_Archive/cross_corr/result.bin");
     Buffer_1D<std::complex<float>> result = cross_corr.result;

@@ -210,12 +210,27 @@
                         next_rx_sense_start_time = spectrogram_handler.get_last_frame_start_time_s() * 1e-6
                             + spectrogram_handler.min_frame_periodicity_s;
                         
+                        //TODO: Make this more robust (case where a frame isn't actually detected)
+                        if (i > 3) //if more than 3 chirps have been sampled
+                        {
+                            size_t chirps_to_compute = 256;
+                            attacking_subsystem -> compute_calculated_values(
+                                spectrogram_handler.get_average_chirp_duration_us(),
+                                spectrogram_handler.get_average_chirp_slope_MHz_us(),
+                                spectrogram_handler.get_average_frame_duration_ms(),
+                                chirps_to_compute
+                            );
+                            spectrogram_handler.load_computed_victim_chirp(attacking_subsystem -> victim_waveform.buffer);
+                        }
+                        
+                        
+
                         //send to attacker if enabled
                         if ((attacking_subsystem -> enabled) && (i > attacking_subsystem -> attack_start_frame))
-                        {   spectrogram_handler.set_attack_in_progress(true);
+                        {   
+                            spectrogram_handler.set_attack_in_progress(true);
                             double next_frame_start_time = spectrogram_handler.get_next_frame_start_time_prediction_ms();
                             attacking_subsystem -> load_new_frame_start_time(next_frame_start_time);
-                            
                         }
                     }
 
@@ -314,6 +329,11 @@
                     path = folder_path + "cpp_captured_frames.bin";
                     spectrogram_handler.captured_frames.set_write_file(path,true);
                     spectrogram_handler.captured_frames.save_to_file();
+
+                    //computed victim waveform
+                    path = folder_path + 'cpp_computed_victim_waveform.bin';
+                    spectrogram_handler.computed_victim_chirp.set_write_file(path,true);
+                    spectrogram_handler.computed_victim_chirp.save_to_file();
 
                 }
 
