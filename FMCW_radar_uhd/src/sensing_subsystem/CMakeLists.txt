@@ -35,12 +35,15 @@ find_package(Threads REQUIRED)
 add_library(SpectrogramHandler SpectrogramHandler.cpp)
 add_library(EnergyDetector EnergyDetector.cpp)
 add_library(SensingSubsystem SensingSubsystem.cpp)
+add_library(CrossCorr CrossCorr.cpp)
 
 
 #link libraries as needed
+target_link_libraries(CrossCorr             PRIVATE BufferHandler)    
 target_link_libraries(SpectrogramHandler    PRIVATE Threads::Threads
                                             PRIVATE BufferHandler
-                                            PRIVATE nlohmann_json::nlohmann_json)
+                                            PRIVATE nlohmann_json::nlohmann_json
+                                            PRIVATE CrossCorr)
 target_link_libraries(EnergyDetector        PRIVATE nlohmann_json::nlohmann_json
                                             PRIVATE BufferHandler)
 target_link_libraries(SensingSubsystem      PRIVATE Threads::Threads

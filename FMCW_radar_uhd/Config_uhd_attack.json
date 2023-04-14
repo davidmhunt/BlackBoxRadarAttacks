@@ -48,6 +48,8 @@
         "min_recording_time_ms": 2,
         "spectogram_peak_detection_threshold_dB": 5,
         "min_points_per_chirp": 5,
+        "precise_timing_estimate_observation_window_time_us": 10,
+        "precise_timing_estimate_max_xcorr_lag_samples": 400,
         "num_victim_frames_to_capture": 20,
         "min_frame_periodicity_ms": 20,
         "max_waiting_time_ms": 1000,

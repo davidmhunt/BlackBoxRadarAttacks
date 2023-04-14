@@ -15,6 +15,7 @@
 
     #define _USE_MATH_DEFINES
     #include <cmath>
+    #include <algorithm>
 
     //including buffer handler
     #include "../BufferHandler.hpp"
@@ -25,11 +26,15 @@
     //include the required headers from EIGEN
     #include "Eigen/Dense"
 
+    //include the custom cross correlation class
+    #include "CrossCorr.hpp"
+
 
     using namespace Buffers;
     using namespace pocketfft;
     using json = nlohmann::json;
     using namespace Eigen;
+    using CrossCorr_namespace::CrossCorr;
 
     namespace SpectrogramHandler_namespace {
 
@@ -59,7 +64,7 @@
             data_type spectrogram_absolute_max_val;
 
             //frequency and timing variables
-            double FMCW_sampling_rate;
+            double FMCW_sampling_rate_Hz;
             double frequency_resolution;
             double frequency_sampling_period;
             double detected_time_offset;
@@ -81,11 +86,18 @@
             double frame_tracking_average_chirp_duration_us;
             double frame_tracking_average_chirp_slope_MHz_us;
 
+            //precise timing parameters
+            size_t xcorr_max_lag;
+            double xcorr_observation_window_time_us;
+            size_t xcorr_observation_window_samples;
+        
+        public: //make the buffers and status flags public
+            //cross correlation class
+            CrossCorr<data_type> cross_corr;
+            
             //status flags
             bool attack_in_progress; //status for if an attack is in progress
             bool victim_waveform_loaded;
-        
-        public:
 
             //public variable for frame tracking
             size_t max_frames_to_capture;
@@ -121,14 +133,13 @@
                 Buffer_1D<int> cluster_indicies;
 
                 //buffers for detected chirps
-                Buffer_1D<double> detected_slopes;
-                Buffer_1D<double> detected_intercepts;
+                Buffer_1D<double> detected_slopes_MHz_us;
+                Buffer_1D<double> detected_intercepts_us;
 
                 //buffer for tracking victim frames
                 Buffer_2D<double> captured_frames; //colums as follows: duration, number of chirps, average slope, average chirp duration, start time, next predicted frame start time
 
                 //buffer containing the victim's estimated waveform
-                //TODO: Initialize this from the data
                 Buffer_1D<std::complex<data_type>> computed_victim_chirp;
 
             
@@ -173,7 +184,7 @@
                                                                 axes(rhs.axes),
                                                                 peak_detection_threshold(rhs.peak_detection_threshold),
                                                                 spectrogram_absolute_max_val(rhs.spectrogram_absolute_max_val),
-                                                                FMCW_sampling_rate(rhs.FMCW_sampling_rate),
+                                                                FMCW_sampling_rate_Hz(rhs.FMCW_sampling_rate_Hz),
                                                                 frequency_resolution(rhs.frequency_resolution),
                                                                 frequency_sampling_period(rhs.frequency_sampling_period),
                                                                 detected_time_offset(rhs.detected_time_offset),
@@ -190,6 +201,10 @@
                                                                 frame_tracking_average_frame_duration_us(rhs.frame_tracking_average_frame_duration_us),
                                                                 frame_tracking_average_chirp_duration_us(rhs.frame_tracking_average_chirp_duration_us),
                                                                 frame_tracking_average_chirp_slope_MHz_us(rhs.frame_tracking_average_chirp_slope_MHz_us),
+                                                                xcorr_max_lag(rhs.xcorr_max_lag),
+                                                                xcorr_observation_window_time_us(rhs.xcorr_observation_window_time_us),
+                                                                xcorr_observation_window_samples(rhs.xcorr_observation_window_samples),
+                                                                cross_corr(rhs.cross_corr),
                                                                 attack_in_progress(rhs.attack_in_progress),
                                                                 victim_waveform_loaded(rhs.victim_waveform_loaded),
                                                                 max_frames_to_capture(rhs.max_frames_to_capture),
@@ -205,8 +220,8 @@
                                                                 detected_times(rhs.detected_times),
                                                                 detected_frequencies(rhs.detected_frequencies),
                                                                 cluster_indicies(rhs.cluster_indicies),
-                                                                detected_slopes(rhs.detected_slopes),
-                                                                detected_intercepts(rhs.detected_intercepts),
+                                                                detected_slopes_MHz_us(rhs.detected_slopes_MHz_us),
+                                                                detected_intercepts_us(rhs.detected_intercepts_us),
                                                                 captured_frames(rhs.captured_frames),
                                                                 computed_victim_chirp(rhs.computed_victim_chirp),
                                                                 debug(rhs.debug),
@@ -235,7 +250,7 @@
                     axes = rhs.axes;
                     peak_detection_threshold = rhs.peak_detection_threshold;
                     spectrogram_absolute_max_val = rhs.spectrogram_absolute_max_val;
-                    FMCW_sampling_rate = rhs.FMCW_sampling_rate;
+                    FMCW_sampling_rate_Hz = rhs.FMCW_sampling_rate_Hz;
                     frequency_resolution = rhs.frequency_resolution;
                     frequency_sampling_period = rhs.frequency_sampling_period;
                     detected_time_offset = rhs.detected_time_offset;
@@ -252,6 +267,10 @@
                     frame_tracking_average_frame_duration_us = rhs.frame_tracking_average_frame_duration_us;
                     frame_tracking_average_chirp_duration_us = rhs.frame_tracking_average_chirp_duration_us;
                     frame_tracking_average_chirp_slope_MHz_us = rhs.frame_tracking_average_chirp_slope_MHz_us;
+                    xcorr_max_lag = rhs.xcorr_max_lag;
+                    xcorr_observation_window_time_us = rhs.xcorr_observation_window_time_us;
+                    xcorr_observation_window_samples = rhs.xcorr_observation_window_samples;
+                    cross_corr = rhs.cross_corr;
                     attack_in_progress = rhs.attack_in_progress;
                     victim_waveform_loaded = rhs.victim_waveform_loaded;
                     max_frames_to_capture = rhs.max_frames_to_capture;
@@ -267,8 +286,8 @@
                     detected_times = rhs.detected_times;
                     detected_frequencies = rhs.detected_frequencies;
                     cluster_indicies = rhs.cluster_indicies;
-                    detected_slopes = rhs.detected_slopes;
-                    detected_intercepts = rhs.detected_intercepts;
+                    detected_slopes_MHz_us = rhs.detected_slopes_MHz_us;
+                    detected_intercepts_us = rhs.detected_intercepts_us;
                     captured_frames = rhs.captured_frames;
                     computed_victim_chirp = rhs.computed_victim_chirp;
                     debug = rhs.debug;
@@ -340,6 +359,16 @@
                     config_good = false;
                 }
 
+                if(config["SensingSubsystemSettings"]["precise_timing_estimate_observation_window_time_us"].is_null()){
+                    std::cerr << "SpectrogramHandler::check_config: observation window time for precise timing not specified" <<std::endl;
+                    config_good = false;
+                }
+
+                if(config["SensingSubsystemSettings"]["precise_timing_estimate_max_xcorr_lag_samples"].is_null()){
+                    std::cerr << "SpectrogramHandler::check_config: max xcorr lag samples for precise timing not specified" <<std::endl;
+                    config_good = false;
+                }
+
                 if(config["SensingSubsystemSettings"]["num_victim_frames_to_capture"].is_null()){
                     std::cerr << "SpectrogramHandler::check_config: num_victim_frames_to_capture not specified" <<std::endl;
                     config_good = false;
@@ -375,12 +404,12 @@
             void initialize_spectrogram_params(){
 
                 //specify the sampling rate
-                FMCW_sampling_rate = config["USRPSettings"]["Multi-USRP"]["sampling_rate"].get<double>();
+                FMCW_sampling_rate_Hz = config["USRPSettings"]["Multi-USRP"]["sampling_rate"].get<double>();
                 samples_per_buffer_rx_signal = config["USRPSettings"]["RX"]["spb"].get<size_t>();
 
                 //determine the frequency sampling period based on the sampling rate
                 double freq_sampling_period;
-                if (FMCW_sampling_rate > 500e6)
+                if (FMCW_sampling_rate_Hz > 500e6)
                 {
                     freq_sampling_period = 0.5e-6;
                 }
@@ -389,7 +418,7 @@
                 }
                 
                 //determine the number of samples per sampling window
-                samples_per_sampling_window = static_cast<size_t>(std::ceil(FMCW_sampling_rate * freq_sampling_period));
+                samples_per_sampling_window = static_cast<size_t>(std::ceil(FMCW_sampling_rate_Hz * freq_sampling_period));
 
                 //determine the fft size
                 fft_size = static_cast<size_t>(
@@ -399,10 +428,10 @@
                 //recompute the actual frequency sampling window using the number of samples 
                 // per sampling window
                 freq_sampling_period = static_cast<double>(samples_per_sampling_window) /
-                                            FMCW_sampling_rate;
+                                            FMCW_sampling_rate_Hz;
                 
                 //determine the number of rows in the rx signal buffer
-                double row_period = static_cast<double>(samples_per_buffer_rx_signal)/FMCW_sampling_rate;
+                double row_period = static_cast<double>(samples_per_buffer_rx_signal)/FMCW_sampling_rate_Hz;
                 double min_recording_time_ms = config["SensingSubsystemSettings"]["min_recording_time_ms"].get<double>();
                 num_rows_rx_signal = static_cast<size_t>(std::ceil((min_recording_time_ms * 1e-3)/row_period));
 
@@ -461,8 +490,8 @@
                 cluster_indicies = Buffer_1D<int>(num_rows_spectrogram);
 
                 //detected slopes and intercepts
-                detected_slopes = Buffer_1D<double>(num_rows_spectrogram);
-                detected_intercepts = Buffer_1D<double>(num_rows_spectrogram);
+                detected_slopes_MHz_us = Buffer_1D<double>(num_rows_spectrogram);
+                detected_intercepts_us = Buffer_1D<double>(num_rows_spectrogram);
 
                 //captured frames
                 max_frames_to_capture = 
@@ -476,7 +505,7 @@
              */
             void initialize_freq_and_timing_bins(){
                 //initialize the frequency parameters and buffers
-                frequency_resolution = FMCW_sampling_rate * 1e-6 /
+                frequency_resolution = FMCW_sampling_rate_Hz * 1e-6 /
                             static_cast<double>(fft_size);
 
                 frequencies = std::vector<double>(fft_size,0);
@@ -490,7 +519,7 @@
                     //compute the timing offset
                     frequency_sampling_period = 
                             static_cast<double>(samples_per_sampling_window)/
-                                (FMCW_sampling_rate * 1e-6);
+                                (FMCW_sampling_rate_Hz * 1e-6);
                     
                     detected_time_offset = frequency_sampling_period * 
                                 static_cast<double>(fft_size) / 2 /
@@ -569,6 +598,18 @@
 
                 //computed chirp vector is already initialized as empty
                 computed_victim_chirp = Buffer_1D<std::complex<data_type>>();
+
+                //get the maximum lag amount and observation window time from the JSON
+                xcorr_max_lag = config["SensingSubsystemSettings"]["precise_timing_estimate_max_xcorr_lag_samples"].get<size_t>();
+                xcorr_observation_window_time_us = config["SensingSubsystemSettings"]["precise_timing_estimate_observation_window_time_us"].get<double>();
+
+                //compute the observation window time in samples
+                xcorr_observation_window_samples = static_cast<size_t>(
+                    roundeven(xcorr_observation_window_time_us * 1e-6 * FMCW_sampling_rate_Hz)
+                );
+
+                //initialize the cross correlation class
+                cross_corr.set_max_lag(xcorr_max_lag);
             }
 
             /**
@@ -602,6 +643,7 @@
                 initialize_freq_and_timing_bins();
                 initialize_clustering_params();
                 initialize_chirp_and_frame_tracking();
+                initialize_precise_timing_estimates();
                 initialize_debug();
                 initialize_save_file_path();
             }
@@ -892,8 +934,8 @@
             void compute_linear_model(){
 
                 //clear the detected slopes and intercepts arrays
-                detected_slopes.clear();
-                detected_intercepts.clear();
+                detected_slopes_MHz_us.clear();
+                detected_intercepts_us.clear();
                 
                 //initialize the b vector
                 Eigen::Vector<double,2> b;
@@ -922,8 +964,8 @@
 
                     //solve the linear equation
                     b = (X.transpose() * X).ldlt().solve(X.transpose() * Y);
-                    detected_slopes.push_back(b(1));
-                    detected_intercepts.push_back(-b(0)/b(1) + detection_start_time_us);
+                    detected_slopes_MHz_us.push_back(b(1));
+                    detected_intercepts_us.push_back(-b(0)/b(1) + detection_start_time_us);
                 }
             }
 
@@ -943,21 +985,21 @@
                 if(not attack_in_progress)
                 {
                     //determine number of chirps detected
-                    chirp_tracking_num_captured_chirps = detected_slopes.num_samples;
+                    chirp_tracking_num_captured_chirps = detected_slopes_MHz_us.num_samples;
                     
                     //compute average chirp slope
                     double sum = 0;
                     for (size_t i = 0; i < chirp_tracking_num_captured_chirps; i++)
                     {
-                        sum += detected_slopes.buffer[i];
+                        sum += detected_slopes_MHz_us.buffer[i];
                     }
                     chirp_tracking_average_slope = sum/
                             static_cast<double>(chirp_tracking_num_captured_chirps);
 
                     //compute average chirp intercept
                     chirp_tracking_average_chirp_duration = 
-                            (detected_intercepts.buffer[chirp_tracking_num_captured_chirps - 1]
-                            - detected_intercepts.buffer[0])
+                            (detected_intercepts_us.buffer[chirp_tracking_num_captured_chirps - 1]
+                            - detected_intercepts_us.buffer[0])
                             / static_cast<double>(chirp_tracking_num_captured_chirps - 1);
 
                     //save num captured chirps, average slope, average chirp duration, and start time
@@ -988,9 +1030,19 @@
                 
                 
                 //estimated frame start time
-                captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] = detected_intercepts.buffer[0]; //time of first chirp
+                //captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] = detected_intercepts_us.buffer[0]; //time of first chirp
 
-                //TODO: compute precise frame start time
+                //if (victim_waveform_loaded)
+                if(false)
+                {
+                    //TODO: remove once compute_precise_frame_start_time is functioning
+                    captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] =
+                        compute_precise_frame_start_time(detected_intercepts_us.buffer[0]);
+                }
+                else{
+                    captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] = detected_intercepts_us.buffer[0];
+                }
+                
 
                 //compute frame duration, average frame duration, and predict next frame
                 if(frame_tracking_num_captured_frames > 1)
@@ -1018,8 +1070,131 @@
                 }
             }
 
+            double compute_precise_frame_start_time(double estimated_start_time_us){
+                
+                /*
+                *determine how many samples before the estimated chirp start time
+                *to include in the window used to perform the cross correlation
+                *NOTE: This is also useful in the case that the estimated start time
+                *occurs before the first sample
+                */
+            
+               double time_before_start_us;
+               if ((estimated_start_time_us - detection_start_time_us) > 0.1)
+               {
+                    time_before_start_us = (1 < (estimated_start_time_us - detection_start_time_us - 0.1)) ? 1 : 
+                    (estimated_start_time_us - detection_start_time_us - 0.1);
+               }
+               else
+               {
+                    time_before_start_us = 0.1;
+               }
+
+               int time_before_start_samples = std::ceil(time_before_start_us * 1e-6 * FMCW_sampling_rate_Hz);
+
+               //Obtain a specific sample for the start of the chirp
+               int chirp_start_sample = static_cast<int>(
+                    std::round(
+                        (estimated_start_time_us - detection_start_time_us) * 1e-6 *
+                        FMCW_sampling_rate_Hz
+                    )
+               );
+
+               //identify the start and end indicies within received signal that fall in the observation window
+                int start_index = chirp_start_sample - time_before_start_samples;
+
+                //get the received signal that falls within the xcorr window (based on the estimated receive time)
+                std::vector<std::complex<data_type>> received_signal(xcorr_observation_window_samples,std::complex<data_type>(0,0));
+                get_received_signal_in_xcorr_observation_window(start_index,received_signal);
+
+                //compute the start index for the computed chirp waveform
+                start_index = -1 * time_before_start_samples;
+                std::vector<std::complex<data_type>> computed_signal(xcorr_observation_window_samples,std::complex<data_type>(0,0));
+                get_computed_chirp_in_xcorr_observation_window(start_index,computed_signal);
+
+                //compute the cross correlation
+                cross_corr.compute(received_signal,computed_signal);
+
+                //get the delay in samples
+                int delay_in_samples = cross_corr.delay_samples;
+                double delay_in_us = cross_corr.compute_delay_us(FMCW_sampling_rate_Hz * 1e-6);
+
+                //return the computed precise start time
+                double precise_start_time = 
+                    (static_cast<double>(
+                        chirp_start_sample + delay_in_samples
+                    ) / FMCW_sampling_rate_Hz) * 1e6 + detection_start_time_us;
+
+               return precise_start_time;
+            }
+        
+            /**
+             * @brief Helper function that loads the samples present in xcorr observation window
+             * for the received signal into an already initialized vector of zeroes
+             * 
+             * @param start_index the start index in the received sample that the xcorr observation window starts. If this is negative, zeros will be used for negative indicies
+             * @param received_signal a reference to an already initialized (with zeros) vector of size xcorr_observation_window_samples. The function will load the relevant samples into this vector
+             */
+            void get_received_signal_in_xcorr_observation_window(int start_index, std::vector<std::complex<data_type>> & received_signal){
+                
+                //initialize variables to perform counting
+                int from_idx;
+                int from_r;
+                int from_c;
+
+                //parameters on the 2D buffer used to store the received signal
+                int num_cols = rx_buffer.num_cols;
+
+                //load the data in to the buffer
+                for (int i = 0; i < xcorr_observation_window_samples; i++)
+                {
+                    from_idx = start_index + i;
+
+                    if(from_idx >= 0){
+                        from_r = from_idx / num_cols;
+                        from_c = from_idx % num_cols;
+                        received_signal[i] = rx_buffer.buffer[from_r][from_c];
+                    }
+                }
+            }
+
+            /**
+             * @brief Helper function that loads the samples present in xcorr observation window
+             * for the computed victim chirp into an already initialized vector of zeroes
+             * 
+             * @param start_index the start index in the received sample that the xcorr observation window starts. If this is negative, zeros will be used for negative indicies
+             * @param computed_signal a reference to an already initialized (with zeros) vector of size xcorr_observation_window_samples. The function will load the relevant samples into this vector. Zeros will also be used at the end if the function attempts to access indicies in the computed_victim_chirp buffer that are greater than the number of samples in the buffer
+             */
+            void get_computed_chirp_in_xcorr_observation_window(int start_index, std::vector<std::complex<data_type>> & computed_signal)
+            {   
+                //initialize variables to perform counting
+                int from_idx;
+                int max_from_idx = computed_victim_chirp.num_samples;
+
+                //load the computed signal into the buffer
+                for (int i = 0; i < xcorr_observation_window_samples; i++)
+                {
+                    from_idx = start_index + i;
+
+                    if ((from_idx >= 0) && (from_idx < max_from_idx))
+                    {
+                        computed_signal[i] = computed_victim_chirp.buffer[from_idx];
+                    }   
+                }
+                
+
+            }
+
         public: //other useful functions to interface with the spectrogram handler are public
 
+            /**
+             * @brief Load a computed victim chirp (generated by the attacking subsystem
+             * using the sensing subsystem's estimates) into the spectrogram handler 
+             * to be used for precise timing estimates
+             * 
+             * @param computed_signal a vector containing complex I-Q samples of a single
+             * victim chirp
+             */
             void load_computed_victim_chirp(std::vector<std::complex<data_type>> & computed_signal){
                 
                 //load the computed signal into the computed_victim_chirp buffer

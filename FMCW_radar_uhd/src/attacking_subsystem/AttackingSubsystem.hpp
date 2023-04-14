@@ -617,7 +617,7 @@
                                 std::exp(
                                     std::complex<data_type>(0,
                                         static_cast<data_type>(
-                                            M_PI * estimated_frequency_slope_MHz_us * 1e-12 *
+                                            M_PI * estimated_frequency_slope_MHz_us * 1e12 *
                                             std::pow(t_actual,2) + phase_shift
                                         ))
                                 );

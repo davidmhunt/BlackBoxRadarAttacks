@@ -1030,7 +1030,7 @@ classdef Subsystem_spectrum_sensing < handle
             %}
             
             %full window size to use for cross-correlation
-            max_lag = 400;
+            max_lag = 400;1,
             observation_window_time_us = 10;
             observation_window_samples = 2 * ceil(0.5 * observation_window_time_us *...
                 obj.FMCW_sample_rate_Msps); %make sure it is an even number

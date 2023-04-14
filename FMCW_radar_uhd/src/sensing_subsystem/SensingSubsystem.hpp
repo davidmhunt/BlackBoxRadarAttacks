@@ -319,11 +319,11 @@
 
                     //fit linear models
                     path = folder_path + "cpp_detected_slopes.bin";
-                    spectrogram_handler.detected_slopes.set_write_file(path,true);
-                    spectrogram_handler.detected_slopes.save_to_file();
+                    spectrogram_handler.detected_slopes_MHz_us.set_write_file(path,true);
+                    spectrogram_handler.detected_slopes_MHz_us.save_to_file();
                     path = folder_path + "cpp_detected_intercepts.bin";
-                    spectrogram_handler.detected_intercepts.set_write_file(path,true);
-                    spectrogram_handler.detected_intercepts.save_to_file();
+                    spectrogram_handler.detected_intercepts_us.set_write_file(path,true);
+                    spectrogram_handler.detected_intercepts_us.save_to_file();
 
                     //compute victim parameters
                     path = folder_path + "cpp_captured_frames.bin";
@@ -334,6 +334,16 @@
                     path = folder_path + "cpp_computed_victim_waveform.bin";
                     spectrogram_handler.computed_victim_chirp.set_write_file(path,true);
                     spectrogram_handler.computed_victim_chirp.save_to_file();
+
+                    //cross correlation
+                    path = folder_path + "cross_correlation_result.bin";
+                    spectrogram_handler.cross_corr.result.set_write_file(path,true);
+                    spectrogram_handler.cross_corr.result.save_to_file();
+
+                    //cross correlation lags
+                    path = folder_path + "cross_correlation_lags.bin";
+                    spectrogram_handler.cross_corr.lags.set_write_file(path,true);
+                    spectrogram_handler.cross_corr.lags.save_to_file();
 
                 }
 
