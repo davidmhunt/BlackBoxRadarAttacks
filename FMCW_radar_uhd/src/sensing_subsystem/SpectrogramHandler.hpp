@@ -1035,7 +1035,6 @@
                 //if (victim_waveform_loaded)
                 if(false)
                 {
-                    //TODO: remove once compute_precise_frame_start_time is functioning
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] =
                         compute_precise_frame_start_time(detected_intercepts_us.buffer[0]);
                 }
