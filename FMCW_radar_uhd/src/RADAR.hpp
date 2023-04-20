@@ -18,7 +18,7 @@
 
     using json = nlohmann::json;
     using USRPHandler_namespace::USRPHandler;
-    using Buffers::RADAR_Buffer;
+    using Buffers::FMCW_Buffer;
     using Buffers::Buffer_1D;
 
     namespace RADAR_namespace{
@@ -34,8 +34,8 @@
             private:
                 json config;
                 USRPHandler<data_type> usrp_handler;
-                RADAR_Buffer<data_type> tx_buffer;
-                RADAR_Buffer<data_type> rx_buffer;
+                FMCW_Buffer<data_type> tx_buffer;
+                FMCW_Buffer<data_type> rx_buffer;
                 size_t samples_per_chirp;
 
                 //Variables to keep track of frame start times

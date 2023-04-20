@@ -11,6 +11,7 @@
     #include <memory>
     #include <cmath>
     #include <typeinfo>
+    #include <algorithm>
 
 /*
     //includes for JSON editing
@@ -341,12 +342,67 @@
                         num_cols(cols),
                         excess_samples(excess){}
 
+                
+                /**
+                 * @brief Construct a new Buffer_2D object- COPY Constructor
+                 * 
+                 * @param rhs reference to existing Buffer_2D object
+                 */
+                Buffer_2D(const Buffer_2D<data_type> & rhs):
+                    Buffer<data_type>(rhs),
+                    buffer(rhs.buffer),
+                    num_rows(rhs.num_rows),
+                    num_cols(rhs.num_cols),
+                    excess_samples(rhs.excess_samples)
+                    {}
+
+                
+                /**
+                 * @brief Assignment operator
+                 * 
+                 * @param rhs reference to another Buffer_2D class
+                 * @return Buffer_2D& 
+                 */
+                Buffer_2D & operator=(const Buffer_2D<data_type> & rhs){
+                    if(this != & rhs) {
+                        Buffer<data_type>::operator=(rhs);
+
+                        buffer = rhs.buffer;
+                        num_rows = rhs.num_rows;
+                        num_cols = rhs.num_cols;
+                        excess_samples = rhs.excess_samples;
+                    }
+
+                    return * this;
+                }
+                
                 /**
                  * @brief Destructor for Buffer_2D object
                  * 
                  */
                 virtual ~Buffer_2D() {}
 
+                
+                /**
+                 * @brief Reconfigure the 2D buffer object to have a specified number of rows,columns, and excess samples
+                 * 
+                 * @param rows 
+                 * @param cols 
+                 * @param excess 
+                 */
+                void reconfigure(size_t rows, size_t cols,size_t excess = 0){
+                    
+                    //check to see if the dimmensions are new. Only compute a new buffer if the dimmensions or excess has changed
+                    if ((rows != num_rows) || (cols != num_cols) || (excess != excess_samples))
+                    {
+                        //initialize a new buffer with the correct dimmensions
+                        buffer = std::vector<std::vector<data_type>>(rows,std::vector<data_type>(cols));
+                        num_rows = rows;
+                        num_cols = cols;
+                        excess_samples = excess;
+                    }
+                }
+                
                 /**
                  * @brief prints out a 1d buffer
                  * 
@@ -384,118 +440,6 @@
                     
                     return;
                 }
-
-                /**
-                 * @brief load data from a 1D vector into the buffer
-                 * 
-                 * @param data_to_load (1D vector) the data to load into the buffer
-                 * @param copy_until_buffer_full (on true) continuously copies data from the vector into the buffer until
-                 * the buffer is full or until the excess samples is reached, even if multiple copies of the data are made
-                 * (on false) inserts up to only 1 copy of the data into the buffer
-                 */
-                void load_data_into_buffer(std::vector<data_type> & data_to_load, bool copy_until_buffer_full = true){
-                    //setup bool to stop copying if copy_until_buffer_full is false
-                    bool stop_signal = false;
-                    //setup iterators
-                    typename std::vector<data_type>::iterator data_iterator = data_to_load.begin();
-                    size_t row = 0;
-                    typename std::vector<data_type>::iterator buffer_iterator = buffer[0].begin();
-                    while (buffer_iterator != (buffer[num_rows - 1].end() - excess_samples) && stop_signal == false)
-                    {
-                        *buffer_iterator = *data_iterator;
-
-                        //increment data iterator
-                        if(data_iterator == data_to_load.end() - 1){
-                            if(copy_until_buffer_full){
-                                data_iterator = data_to_load.begin();
-                            }
-                            else{
-                                stop_signal = true;
-                            }
-                            
-                        }
-                        else{
-                            ++data_iterator;
-                        }
-
-                        //increment buffer iterator
-                        if(buffer_iterator == buffer[row].end() - 1){
-                            if(row == (num_rows - 1) && excess_samples == 0){
-                                buffer_iterator = buffer[row].end();
-                            }
-                            else{
-                                row = row + 1;
-                                buffer_iterator = buffer[row].begin();
-                            }
-                        }
-                        else{
-                            ++buffer_iterator;
-                        }
-                    }
-                }
-
-                /**
-                 * @brief load data from a 2D vector into the buffer
-                 * 
-                 * @param data_to_load (2D vector) the data to load into the buffer
-                 * @param copy_until_buffer_full (on true) continuously copies data from the vector into the buffer until
-                 * the buffer is full or until the excess samples is reached, even if multiple copies of the data are made
-                 * (on false) inserts up to only 1 copy of the data into the buffer
-                 */
-                void load_data_into_buffer(std::vector<std::vector<data_type>> & data_to_load, bool copy_until_buffer_full = true){
-                    //setup bool to stop copying if copy_until_buffer_full is false
-                    bool stop_signal = false;
-                    //setup iterators
-
-                    //data iterators
-                    typename std::vector<data_type>::iterator data_iterator = data_to_load[0].begin();
-                    size_t data_row = 0;
-                    size_t num_data_rows = data_to_load.size();
-
-                    //buffer iterators
-                    size_t buffer_row = 0;
-                    typename std::vector<data_type>::iterator buffer_iterator = buffer[0].begin();
-                    while (buffer_iterator != (buffer[num_rows - 1].end() - excess_samples) && stop_signal == false)
-                    {
-                        *buffer_iterator = *data_iterator;
-
-                        //increment data iterator
-                        if(data_iterator == data_to_load[data_row].end() - 1){
-                            //if it is the last row in the vector
-                            if (data_row == num_data_rows - 1)
-                            {
-                                if(copy_until_buffer_full){
-                                    data_row = 0;
-                                    data_iterator = data_to_load[0].begin();
-                                }
-                                else{
-                                    stop_signal = true;
-                                }
-                            }
-                            else {
-                                data_row = data_row + 1;
-                                data_iterator = data_to_load[data_row].begin();
-                            }
-                        }
-                        else{
-                            ++data_iterator;
-                        }
-
-                        //increment buffer iterator
-                        if(buffer_iterator == buffer[buffer_row].end() - 1){
-                            if(buffer_row == (num_rows - 1) && excess_samples == 0){
-                                buffer_iterator = buffer[buffer_row].end();
-                            }
-                            else{
-                                buffer_row = buffer_row + 1;
-                                buffer_iterator = buffer[buffer_row].begin();
-                            }
-                        }
-                        else{
-                            ++buffer_iterator;
-                        }
-                    }
-                }
                              
                 
                 /**
@@ -504,9 +448,9 @@
                  * @param data_to_load (1D vector) the data to load into the buffer
                  * @param copy_until_buffer_full (on true) continuously copies data from the vector into the buffer until
                  * the buffer is full or until the excess samples is reached, even if multiple copies of the data are made
-                 * (on false) inserts up to only 1 copy of the data into the buffer
+                 * (on false) inserts up to only 1 copy of the data into the buffer (assumes buffer has already been initialized)
                  */
-                void load_data_into_buffer_efficient(std::vector<data_type> & data_to_load, bool copy_until_buffer_full = true){
+                void load_data_into_buffer(std::vector<data_type> & data_to_load, bool copy_until_buffer_full = true){
 
                     //get the number of samples in the data_to_load
                     size_t m = data_to_load.size(); //rows
@@ -552,9 +496,9 @@
                  * @param data_to_load (2D vector) the data to load into the buffer
                  * @param copy_until_buffer_full (on true) continuously copies data from the vector into the buffer until
                  * the buffer is full or until the excess samples is reached, even if multiple copies of the data are made
-                 * (on false) inserts up to only 1 copy of the data into the buffer
+                 * (on false) inserts up to only 1 copy of the data into the buffer. (Assumes buffer has already been initialized)
                  */
-                void load_data_into_buffer_efficient(std::vector<std::vector<data_type>> & data_to_load, bool copy_until_buffer_full = true){
+                void load_data_into_buffer(std::vector<std::vector<data_type>> & data_to_load, bool copy_until_buffer_full = true){
 
                     //get dimmensions of data_to_load array
                     size_t m = data_to_load.size(); //rows
@@ -644,7 +588,7 @@
                         std::vector<data_type> data = Buffer<data_type>::load_data_from_read_file();
                         
                         //load it into the file
-                        load_data_into_buffer_efficient(data,false);
+                        load_data_into_buffer(data,false);
                     }
                     else {
                         std::cerr << "Buffer_2D::import_from_file: attempted to import from file when buffer wasn't initialized" <<std::endl;
@@ -673,7 +617,7 @@
                         buffer = std::vector<std::vector<data_type>>(num_rows,std::vector<data_type>(num_cols));
                         
                         //load it into the file
-                        load_data_into_buffer_efficient(data,false);
+                        load_data_into_buffer(data,false);
 
                         return;
                 }
@@ -740,7 +684,7 @@
                  */
                 Buffer_1D(size_t samples, bool debug = false) 
                     : Buffer<data_type>(true,debug),
-                    buffer(samples),
+                    buffer(samples,data_type(0)), //initializing the buffer with all zeros
                     num_samples(samples) {}
 
                 /**
@@ -869,7 +813,8 @@
                  * @param num_samps the number of samples for the buffer to store
                  */
                 void set_buffer_size(size_t num_samps){
-                    buffer = std::vector<data_type>(num_samps);
+                    //initialize the buffer with all zeros
+                    buffer = std::vector<data_type>(num_samps,data_type(0));
                     num_samples = num_samps;
                 }
 
@@ -881,6 +826,19 @@
                 void push_back(data_type element){
                     num_samples += 1;
                     buffer.push_back(element);
+                }
+
+                /**
+                 * @brief Removes the item at the specified index from the buffer
+                 * 
+                 * @param index the index within the buffer to remove the object at
+                 */
+                void remove_item(size_t index){
+                    if (num_samples > 0)
+                    {
+                        buffer.erase(buffer.begin() + index);
+                        num_samples -= 1;
+                    }
                 }
 
                 /**
@@ -950,7 +908,7 @@
          * @tparam data_type creates a RADAR Buffer of type std::complex<data_type>
          */
         template<typename data_type>
-        class RADAR_Buffer : public Buffer_2D<std::complex<data_type>>{
+        class FMCW_Buffer : public Buffer_2D<std::complex<data_type>>{
             public:
                 //variables
                 size_t num_chirps;
@@ -963,14 +921,14 @@
                      * @brief Construct a new fmcw buffer object
                      * 
                      */
-                    RADAR_Buffer(): Buffer_2D<std::complex<data_type>>(){}
+                    FMCW_Buffer(): Buffer_2D<std::complex<data_type>>(){}
                     
                     /**
                      * @brief Construct a new fmcw buffer object
                      * 
                      * @param debug the desired debug setting
                      */
-                    RADAR_Buffer(bool debug): Buffer_2D<data_type>(debug){}
+                    FMCW_Buffer(bool debug): Buffer_2D<data_type>(debug){}
                     
                     /**
                      * @brief Construct a new RADAR buffer object (initialized)
@@ -980,7 +938,7 @@
                      * @param desired_num_chirps the number of chirps the buffer should contain
                      * @param debug the desired debug setting (optional)
                      */
-                    RADAR_Buffer(
+                    FMCW_Buffer(
                         size_t desired_samples_per_buff,
                         size_t required_samples_per_chirp,
                         size_t desired_num_chirps,
@@ -989,14 +947,44 @@
                             configure_fmcw_buffer(
                                 desired_samples_per_buff,
                                 required_samples_per_chirp,
-                                desired_num_chirps);
+                                desired_num_chirps,
+                                true);
                         }
                     
+
+                    /**
+                     * @brief Construct a new fmcw buffer object - COPY Constructor
+                     * 
+                     * @param rhs reference to another FMCW_Buffer object to copy
+                     */
+                    FMCW_Buffer(const FMCW_Buffer<data_type> & rhs):
+                        Buffer_2D<data_type>(rhs),
+                        num_chirps(rhs.num_chirps),
+                        samples_per_chirp(rhs.samples_per_chirp)
+                        {}
+
+                    /**
+                     * @brief Assignment Operator
+                     * 
+                     * @param rhs the FMCW Buffer object who's values we wish to assign to the current FMCW Buffer
+                     * @return FMCW_Buffer& the current FMCW Buffer
+                     */
+                    FMCW_Buffer & operator=(const FMCW_Buffer<data_type> & rhs){
+                        if(this != & rhs) {
+                            Buffer_2D<data_type>::operator=(rhs);
+
+                            num_chirps = rhs.num_chirps;
+                            samples_per_chirp = rhs.samples_per_chirp;
+                        }
+
+                        return * this;
+                    }
+
                     /**
                      * @brief Destroy the fmcw buffer object
                      * 
                      */
-                    ~RADAR_Buffer() {}
+                    virtual ~FMCW_Buffer() {}
 
                     /**
                      * @brief configures a Buffer_2D to be able to operate as a buffer used by the RADAR radar,
@@ -1005,33 +993,41 @@
                      * @param desired_samples_per_buff the number of samples in a buffer
                      * @param required_samples_per_chirp the number of samples per chirp
                      * @param desired_num_chirps the number of chirps
+                     * @param reset_buffer automatically resets the buffer if true. If false, function will check dimmensions and parameters to see if they have changed. Buffer will be reset only if the dimmensions or parameters have changed
                      */
                     void configure_fmcw_buffer(
                         size_t desired_samples_per_buff,
                         size_t required_samples_per_chirp,
-                        size_t desired_num_chirps)
-                    {
-                        //start of code for function
-                        num_chirps = desired_num_chirps;
-                        samples_per_chirp = required_samples_per_chirp;
-                        Buffer_2D<std::complex<data_type>>::num_cols = desired_samples_per_buff;
-
-                        if (desired_samples_per_buff == required_samples_per_chirp){
-                            Buffer_2D<std::complex<data_type>>::num_rows = desired_num_chirps;
-                            Buffer_2D<std::complex<data_type>>::excess_samples = 0;
-                        }
-                        else if (((desired_num_chirps * required_samples_per_chirp) % desired_samples_per_buff) == 0){
-                            Buffer_2D<std::complex<data_type>>::num_rows = (desired_num_chirps * required_samples_per_chirp) / desired_samples_per_buff;
-                            Buffer_2D<std::complex<data_type>>::excess_samples = 0;   
-                        }
-                        else
+                        size_t desired_num_chirps,
+                        bool reset_buffer = false)
+                    {   
+                        //check to make sure that the dimmensions have changed. Only re-configure the buffer if dimmensions have changed (unless reset buffer is true)
+                        if ( reset_buffer ||
+                            (desired_samples_per_buff != Buffer_2D<std::complex<data_type>>::num_cols) ||
+                            (required_samples_per_chirp != samples_per_chirp) ||
+                            (desired_num_chirps != num_chirps))
                         {
-                            Buffer_2D<std::complex<data_type>>::num_rows = ((desired_num_chirps * required_samples_per_chirp) / desired_samples_per_buff) + 1;
-                            Buffer_2D<std::complex<data_type>>::excess_samples = (Buffer_2D<std::complex<data_type>>::num_rows * desired_samples_per_buff) - (desired_num_chirps * required_samples_per_chirp);
-                        }
+                            num_chirps = desired_num_chirps;
+                            samples_per_chirp = required_samples_per_chirp;
+                            Buffer_2D<std::complex<data_type>>::num_cols = desired_samples_per_buff;
 
-                        Buffer_2D<std::complex<data_type>>::buffer = std::vector<std::vector<std::complex<data_type>>>(Buffer_2D<std::complex<data_type>>::num_rows,std::vector<std::complex<data_type>>(Buffer_2D<std::complex<data_type>>::num_cols));
-                        Buffer<std::complex<data_type>>::buffer_init_status = true;
+                            if (desired_samples_per_buff == required_samples_per_chirp){
+                                Buffer_2D<std::complex<data_type>>::num_rows = desired_num_chirps;
+                                Buffer_2D<std::complex<data_type>>::excess_samples = 0;
+                            }
+                            else if (((desired_num_chirps * required_samples_per_chirp) % desired_samples_per_buff) == 0){
+                                Buffer_2D<std::complex<data_type>>::num_rows = (desired_num_chirps * required_samples_per_chirp) / desired_samples_per_buff;
+                                Buffer_2D<std::complex<data_type>>::excess_samples = 0;   
+                            }
+                            else
+                            {
+                                Buffer_2D<std::complex<data_type>>::num_rows = ((desired_num_chirps * required_samples_per_chirp) / desired_samples_per_buff) + 1;
+                                Buffer_2D<std::complex<data_type>>::excess_samples = (Buffer_2D<std::complex<data_type>>::num_rows * desired_samples_per_buff) - (desired_num_chirps * required_samples_per_chirp);
+                            }
+
+                            Buffer_2D<std::complex<data_type>>::buffer = std::vector<std::vector<std::complex<data_type>>>(Buffer_2D<std::complex<data_type>>::num_rows,std::vector<std::complex<data_type>>(Buffer_2D<std::complex<data_type>>::num_cols));
+                            Buffer<std::complex<data_type>>::buffer_init_status = true;
+                        }                        
                     }
 
                     /**
@@ -1039,12 +1035,426 @@
                      * vector as necessary until the buffer is full or the number of excess samples has been
                      * reached
                      * 
-                     * @param chirp a vector containing the samples for a signle chirp
+                     * @param chirp a vector containing the samples for multiple chirps
                      */
                     void load_chirp_into_buffer(std::vector<std::complex<data_type>> & chirp){
                         Buffer_2D<std::complex<data_type>>::load_data_into_buffer(chirp,true);
                     }
+
+                    /**
+                     * @brief loads data from a 2D vector containing multiple chirps into the 
+                     * initialized FMCW buffer. Only 1 copy of the 2D vector is loaded
+                     * 
+                     * @param chirps a 2D vector containing the samples for multiple chirps
+                     */
+                    void load_chirps_into_buffer(std::vector<std::vector<std::complex<data_type>>> & chirps){
+                        Buffer_2D<std::complex<data_type>>::load_data_into_buffer(chirps,false);
+                    }
         };
 
-    }
+
+        /**
+         * @brief A customized 1D buffer, specifically designed for saving and performing estimation for a specific parameter
+         * 
+         * @tparam data_type 
+         */
+        template<typename data_type>
+        class Parameter_Estimation_Buffer: public Buffer_1D<data_type>
+        {
+        private:
+            
+            //parameter to track the number of estimates that the buffer contains
+            size_t num_estimates;
+            
+            //parameters to store the mean and variance of the parameter estimates
+            data_type mean;
+            data_type variance;
+
+            //status variable to track if the parameter estimation buffer is full
+            bool buffer_full;
+        public:
+
+            /**
+             * @brief Create an empty parameter estimation buffer
+             * 
+             */
+            Parameter_Estimation_Buffer() : 
+                Buffer_1D<data_type>(),
+                num_estimates(0),
+                mean(0),
+                variance(0),
+                buffer_full(false)
+                {}
+            
+            /**
+             * @brief Construct a new Parameter_Estimation_Buffer object
+             * 
+             * @param samples The number of estimates for the parameter estimation buffer to store
+             * @param debug debug status
+             */
+            Parameter_Estimation_Buffer(size_t samples, bool debug=false):
+                Buffer_1D<data_type>(samples,debug),
+                num_estimates(0),
+                mean(0),
+                variance(0),
+                buffer_full(0)
+                {}
+
+            
+            /**
+             * @brief Construct a new Parameter_Estimation_Buffer object - COPY CONSTRUCTOR
+             * 
+             * @param rhs reference to another parameter estimation buffer object
+             */
+            Parameter_Estimation_Buffer(const Parameter_Estimation_Buffer<data_type> & rhs):
+                Buffer_1D<data_type>(rhs),
+                num_estimates(rhs.num_estimates),
+                mean(rhs.mean),
+                variance(rhs.variance),
+                buffer_full(rhs.buffer_full)
+                {}
+
+            /**
+             * @brief Assigment Operator
+             * 
+             * @param rhs object to make assignment from
+             * @return Parameter_Estimation_Buffer& 
+             */
+            Parameter_Estimation_Buffer & operator=(const Parameter_Estimation_Buffer<data_type> & rhs){
+                if(this != & rhs){
+                    Buffer_1D<data_type>::operator=(rhs);
+                    num_estimates = rhs.num_estimates;
+                    mean = rhs.mean;
+                    variance = rhs.variance;
+                    buffer_full = rhs.buffer_full;
+                }
+
+                return * this;
+            }
+            
+            /**
+             * @brief Destroy Parameter Estimation Buffer
+             * 
+             */
+            virtual ~Parameter_Estimation_Buffer() {}
+
+
+            /**
+             * @brief Reset the parameter estimation buffer estimates, and all of the samples in the buffer to zero
+             * 
+             * @param samples the number of samples for the buffer to store. If zero, will use the current number of samples. Defaults to zero
+             */
+            void reset(size_t samples = 0){
+
+                //reset the buffer to be the specified number of samples
+                if(samples > 0){
+                    Buffer_1D<data_type>::set_buffer_size(samples);
+                }
+                
+                //reset the other variables
+                num_estimates = 0;
+                mean = 0;
+                variance = 0;
+                buffer_full = 0;
+            }
+
+            /**
+             * @brief Loads new parameter estimates into the buffer, provided that there is room in the buffer
+             * 
+             * @param estimates a vector containing the new estimates to include
+             */
+            void load_estimates(std::vector<data_type> & estimates){
+                if (not buffer_full)
+                {
+                    for (size_t i = 0; i < estimates.size(); i++)
+                    {
+                        //add the estimate into the buffer
+                        Buffer_1D<data_type>::buffer[num_estimates] = estimates[i];
+
+                        //incrememtn the number of estimates
+                        num_estimates++;
+
+                        //check to make sure that the buffer still has room
+                        if (num_estimates == Buffer_1D<data_type>::num_samples)
+                        {
+                            buffer_full = true;
+                            break;
+                        }
+                    }
+                }
+                update_statistics();
+                return;
+            }
+
+            /**
+             * @brief Loads new parameter estimates into the buffer, provided that there is room in the buffer
+             * 
+             * @param estimates a 1D Buffer containing the new estimates to include
+             */
+            void load_estimates(Buffer_1D<data_type> & estimates){
+                if (not buffer_full)
+                {
+                    for (size_t i = 0; i < estimates.num_samples; i++)
+                    {
+                        //add the estimate into the buffer
+                        Buffer_1D<data_type>::buffer[num_estimates] = estimates.buffer[i];
+
+                        //incrememtn the number of estimates
+                        num_estimates++;
+
+                        //check to make sure that the buffer still has room
+                        if (num_estimates == Buffer_1D<data_type>::num_samples)
+                        {
+                            buffer_full = true;
+                            break;
+                        }
+                    }
+                }
+                update_statistics();
+                return;
+            }
+
+            /**
+             * @brief Load a single new estimate into the parameter estimation buffer
+             * 
+             * @param estimate the parameter estimate to load
+             */
+            void load_estimate(data_type estimate){
+                if (not buffer_full){
+                    //add the estimate to the buffer
+                    Buffer_1D<data_type>::buffer[num_estimates] = estimate;
+                    num_estimates ++;
+
+                    //check to make sure that the buffer still has room
+                    if (num_estimates == Buffer_1D<data_type>::num_samples)
+                    {
+                        buffer_full = true;
+                    }
+                }
+                update_statistics();
+            }
+
+            /**
+             * @brief Load in new parameter estimates, but from intercepts. The parameter estimation buffer will use the difference between consecutive intercepts as the estimate for the parameter
+             * 
+             * @param intercepts a vector of intercepts to use when computing the parameter estimates
+             * @param use_previous_intercept On True, will use the provided previous intercept to compute the estimation for the first parameter estimate. Defaults to False
+             * @param previous_intercept A previuos intercept for the (n=-1) case which will be used to compute the difference between (n=0 and n=-1). Only used when use_previous_intercept is true 
+             */
+            void load_estimates_from_intercepts(
+                    std::vector<data_type> & intercepts,
+                    bool use_previous_intercept = false,
+                    data_type previous_intercept = 0)
+            {   
+
+                if(not buffer_full){
+                        //compute the number of estimates
+                    size_t new_estimates;
+                    if (use_previous_intercept)
+                    {
+                        new_estimates = intercepts.size();
+                    }
+                    else{
+                        new_estimates = intercepts.size() - 1;
+                    }
+                    
+                    //initialize a vector to store the estimates in
+                    std::vector<data_type> estimates(new_estimates);
+                    
+                    //compute the estimates from the intercepts
+                    if(use_previous_intercept){
+                        estimates[0] = intercepts[0] - previous_intercept;
+                        for (size_t i = 1; i < new_estimates; i++){
+                            estimates[i] = intercepts[i] - intercepts[i - 1];
+                        }
+                    }
+                    else{
+                        for (size_t i = 0; i < new_estimates; i++){
+                            estimates[i] = intercepts[i + 1] - intercepts[i];
+                        }
+                    }
+
+                    load_estimates(estimates);
+                }
+                //don't need to update statistics because load_estimates already does it
+                return;
+            }
+
+            /**
+             * @brief Load in new parameter estimates, but from intercepts. The parameter estimation buffer will use the difference between consecutive intercepts as the estimate for the parameter
+             * 
+             * @param intercepts a 1D Buffer of intercepts to use when computing the parameter estimates
+             * @param use_previous_intercept On True, will use the provided previous intercept to compute the estimation for the first parameter estimate. Defaults to False
+             * @param previous_intercept A previuos intercept for the (n=-1) case which will be used to compute the difference between (n=0 and n=-1). Only used when use_previous_intercept is true 
+             */
+            void load_estimates_from_intercepts(
+                    Buffer_1D<data_type> & intercepts,
+                    bool use_previous_intercept = false,
+                    data_type previous_intercept = 0)
+            {   
+
+                if(not buffer_full){
+                        //compute the number of estimates
+                    size_t new_estimates;
+                    if (use_previous_intercept)
+                    {
+                        new_estimates = intercepts.num_samples;
+                    }
+                    else{
+                        new_estimates = intercepts.num_samples - 1;
+                    }
+                    
+                    //initialize a vector to store the estimates in
+                    std::vector<data_type> estimates(new_estimates);
+                    
+                    //compute the estimates from the intercepts
+                    if(use_previous_intercept){
+                        estimates[0] = intercepts.buffer[0] - previous_intercept;
+                        for (size_t i = 1; i < new_estimates; i++){
+                            estimates[i] = intercepts.buffer[i] - intercepts.buffer[i - 1];
+                        }
+                    }
+                    else{
+                        for (size_t i = 0; i < new_estimates; i++){
+                            estimates[i] = intercepts.buffer[i + 1] - intercepts.buffer[i];
+                        }
+                    }
+
+                    load_estimates(estimates);
+                }
+                //don't need to update statistics because load_estimates already does it
+                return;
+            }
+
+            /**
+             * @brief Load a new estimate into the parameter estimation buffer given a two intercepts
+             * 
+             * @param intercept the intercept at n=0
+             * @param previous_intercept the intercept at n=-1
+             */
+            void load_estimate_from_intercept(
+                data_type intercept,
+                data_type previous_intercept)
+            {
+                if (not buffer_full)
+                {
+                    load_estimate(intercept - previous_intercept);
+                }
+                //don't need to update statistics because load_estimates already does it
+                return;
+            }
+
+            /**
+             * @brief Removes outliers from the parameter estimates by looking for samples that are 1.5 * IQR away from the Q3 or Q1 samples (quartiles)
+             * 
+             */
+            void remove_outliers(){
+                //sort the samples
+                std::sort(Buffer_1D<data_type>::buffer.begin(), Buffer_1D<data_type>::buffer.end());
+
+                //compute the IQR range
+                size_t Q1_sample = static_cast<size_t>(std::ceil(0.25 * static_cast<double>(num_estimates)));
+                size_t Q3_sample = static_cast<size_t>(std::floor(0.75 * static_cast<double>(num_estimates)));
+
+                data_type IQR = Buffer_1D<data_type>::buffer[Q3_sample] - Buffer_1D<data_type>::buffer[Q1_sample];
+                data_type upper_fence = Buffer_1D<data_type>::buffer[Q3_sample] + 1.5 * IQR;
+                data_type lower_fence = Buffer_1D<data_type>::buffer[Q1_sample] - 1.5 * IQR;
+
+                //sweep through the samples and remove any outliers
+                size_t i = 0;
+                data_type val;
+                while (i < num_estimates)
+                {   
+                    val = Buffer_1D<data_type>::buffer[i];
+                    if ((val < lower_fence) || (val > upper_fence))
+                    {
+                        //remove the outlier
+                        Buffer_1D<data_type>::remove_item(i);
+                        num_estimates -= 1;
+                        buffer_full = false; //buffer would no longer be full
+                    }else
+                    {
+                        i++;
+                    }
+                }
+                //update the statistics after the outliers have been removed
+                update_statistics();
+                return;
+            }
+
+            /**
+             * @brief Get the mean
+             * 
+             * @return mean 
+             */
+            data_type get_mean(){
+                return mean;
+            }
+
+            /**
+             * @brief Get the variance
+             * 
+             * @return variance 
+             */
+            data_type get_variance(){
+                return variance;
+            }
+
+            /**
+             * @brief Get the stdev
+             * 
+             * @return stdev
+             */
+            data_type get_stdev(){
+                return std::sqrt(variance);
+            }
+
+            /**
+             * @brief Get the buffer full status
+             * 
+             * @return true 
+             * @return false 
+             */
+            bool get_buffer_full_status(){
+                return buffer_full;
+            }
+
+        private: //helper functions for computing statistics
+
+            /**
+             * @brief Update the mean and variance
+             * 
+             */
+            void update_statistics(){
+                //update the mean
+                compute_mean();
+
+                //update the variance
+                compute_variance();
+            }
+            
+            /**
+             * @brief Compute the sample mean of the parameters
+             * 
+             */
+            void compute_mean(){
+                data_type sum = 0;
+                for (size_t i = 0; i < num_estimates; i++)
+                {
+                    sum += Buffer_1D<data_type>::buffer[i];
+                }
+                mean = sum / static_cast<data_type>(num_estimates);
+            }
+
+            void compute_variance(){
+                data_type sum = 0;
+                for (size_t i = 0; i < num_estimates; i++){
+                    sum += std::pow((Buffer_1D<data_type>::buffer[i] - mean),2);
+                }
+                variance = sum / static_cast<data_type>(num_estimates);
+            }
+
+        }; //end of Parameter_Estimation_Buffer class
+        
+    }//end of namespace
 #endif

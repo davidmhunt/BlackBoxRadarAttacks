@@ -330,6 +330,21 @@
                     spectrogram_handler.captured_frames.set_write_file(path,true);
                     spectrogram_handler.captured_frames.save_to_file();
 
+                    //slope period estimator
+                    path = folder_path + "cpp_slope_estimates.bin";
+                    spectrogram_handler.slope_MHz_us_estimator_buffer.set_write_file(path,true);
+                    spectrogram_handler.slope_MHz_us_estimator_buffer.save_to_file();
+
+                    //chirp period estimator
+                    path = folder_path + "cpp_chirp_estimates.bin";
+                    spectrogram_handler.chirp_period_us_estimator_buffer.set_write_file(path,true);
+                    spectrogram_handler.chirp_period_us_estimator_buffer.save_to_file();
+
+                    //frame period estimator
+                    path = folder_path + "cpp_frame_estimates.bin";
+                    spectrogram_handler.frame_period_us_estimator_buffer.set_write_file(path,true);
+                    spectrogram_handler.frame_period_us_estimator_buffer.save_to_file();
+
                     //computed victim waveform
                     path = folder_path + "cpp_computed_victim_waveform.bin";
                     spectrogram_handler.computed_victim_chirp.set_write_file(path,true);

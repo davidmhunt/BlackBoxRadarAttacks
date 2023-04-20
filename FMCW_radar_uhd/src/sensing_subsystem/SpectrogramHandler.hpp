@@ -100,6 +100,7 @@
             bool victim_waveform_loaded;
 
             //public variable for frame tracking
+            size_t max_chirps_to_capture;
             size_t max_frames_to_capture;
             double min_frame_periodicity_s;
             double max_waiting_time;
@@ -135,6 +136,11 @@
                 //buffers for detected chirps
                 Buffer_1D<double> detected_slopes_MHz_us;
                 Buffer_1D<double> detected_intercepts_us;
+
+                //parameter estimation buffers
+                Parameter_Estimation_Buffer<double> slope_MHz_us_estimator_buffer;
+                Parameter_Estimation_Buffer<double> chirp_period_us_estimator_buffer;
+                Parameter_Estimation_Buffer<double> frame_period_us_estimator_buffer;
 
                 //buffer for tracking victim frames
                 Buffer_2D<double> captured_frames; //colums as follows: duration, number of chirps, average slope, average chirp duration, start time, next predicted frame start time
@@ -207,6 +213,7 @@
                                                                 cross_corr(rhs.cross_corr),
                                                                 attack_in_progress(rhs.attack_in_progress),
                                                                 victim_waveform_loaded(rhs.victim_waveform_loaded),
+                                                                max_chirps_to_capture(rhs.max_chirps_to_capture),
                                                                 max_frames_to_capture(rhs.max_frames_to_capture),
                                                                 min_frame_periodicity_s(rhs.min_frame_periodicity_s),
                                                                 max_waiting_time(rhs.max_waiting_time),
@@ -222,6 +229,9 @@
                                                                 cluster_indicies(rhs.cluster_indicies),
                                                                 detected_slopes_MHz_us(rhs.detected_slopes_MHz_us),
                                                                 detected_intercepts_us(rhs.detected_intercepts_us),
+                                                                slope_MHz_us_estimator_buffer(rhs.slope_MHz_us_estimator_buffer),
+                                                                chirp_period_us_estimator_buffer(rhs.chirp_period_us_estimator_buffer),
+                                                                frame_period_us_estimator_buffer(rhs.frame_period_us_estimator_buffer),
                                                                 captured_frames(rhs.captured_frames),
                                                                 computed_victim_chirp(rhs.computed_victim_chirp),
                                                                 debug(rhs.debug),
@@ -273,6 +283,7 @@
                     cross_corr = rhs.cross_corr;
                     attack_in_progress = rhs.attack_in_progress;
                     victim_waveform_loaded = rhs.victim_waveform_loaded;
+                    max_chirps_to_capture = rhs.max_chirps_to_capture;
                     max_frames_to_capture = rhs.max_frames_to_capture;
                     min_frame_periodicity_s = rhs.min_frame_periodicity_s;
                     max_waiting_time = rhs.max_waiting_time;
@@ -288,6 +299,9 @@
                     cluster_indicies = rhs.cluster_indicies;
                     detected_slopes_MHz_us = rhs.detected_slopes_MHz_us;
                     detected_intercepts_us = rhs.detected_intercepts_us;
+                    slope_MHz_us_estimator_buffer = rhs.slope_MHz_us_estimator_buffer;
+                    chirp_period_us_estimator_buffer = rhs.chirp_period_us_estimator_buffer;
+                    frame_period_us_estimator_buffer = rhs.frame_period_us_estimator_buffer;
                     captured_frames = rhs.captured_frames;
                     computed_victim_chirp = rhs.computed_victim_chirp;
                     debug = rhs.debug;
@@ -371,6 +385,11 @@
 
                 if(config["SensingSubsystemSettings"]["num_victim_frames_to_capture"].is_null()){
                     std::cerr << "SpectrogramHandler::check_config: num_victim_frames_to_capture not specified" <<std::endl;
+                    config_good = false;
+                }
+
+                if(config["SensingSubsystemSettings"]["max_victim_chirps_to_capture"].is_null()){
+                    std::cerr << "SpectrogramHandler::check_config: max_victim_chirps_to_capture not specified" <<std::endl;
                     config_good = false;
                 }
 
@@ -497,6 +516,15 @@
                 max_frames_to_capture = 
                     config["SensingSubsystemSettings"]["num_victim_frames_to_capture"].get<size_t>();
                 captured_frames = Buffer_2D<double>(max_frames_to_capture,6);
+
+                //parameter estimation buffers
+                max_chirps_to_capture = 
+                    config["SensingSubsystemSettings"]["max_victim_chirps_to_capture"].get<size_t>();
+                
+                slope_MHz_us_estimator_buffer = Parameter_Estimation_Buffer<double>(max_chirps_to_capture);
+                chirp_period_us_estimator_buffer = Parameter_Estimation_Buffer<double>(max_chirps_to_capture);
+                frame_period_us_estimator_buffer = Parameter_Estimation_Buffer<double>(max_frames_to_capture);
+                
             }
 
             /**
@@ -979,61 +1007,23 @@
                 frame_tracking_num_captured_frames += 1;
                 
                 //TODO: revise this process to store a series of tracked chirps and frames so as to be able to filter out outliers as needed
-
-                //if an attack is in progress, all chirps except the first chirp are affected by 
-                //interference from the attacker subsystem
-                if(not attack_in_progress)
-                {
-                    //determine number of chirps detected
+                if(not attack_in_progress){
+                    //determine the number of chirps detected
                     chirp_tracking_num_captured_chirps = detected_slopes_MHz_us.num_samples;
-                    
+
+                    //save the estimates to the parameter estimator buffers
+                    slope_MHz_us_estimator_buffer.load_estimates(detected_slopes_MHz_us.buffer);
+                    chirp_period_us_estimator_buffer.load_estimates_from_intercepts(detected_intercepts_us.buffer);
+
                     //compute average chirp slope
-                    double sum = 0;
-                    for (size_t i = 0; i < chirp_tracking_num_captured_chirps; i++)
-                    {
-                        sum += detected_slopes_MHz_us.buffer[i];
-                    }
-                    chirp_tracking_average_slope = sum/
-                            static_cast<double>(chirp_tracking_num_captured_chirps);
-
-                    //compute average chirp intercept
-                    chirp_tracking_average_chirp_duration = 
-                            (detected_intercepts_us.buffer[chirp_tracking_num_captured_chirps - 1]
-                            - detected_intercepts_us.buffer[0])
-                            / static_cast<double>(chirp_tracking_num_captured_chirps - 1);
-
-                    //save num captured chirps, average slope, average chirp duration, and start time
-                    captured_frames.buffer[frame_tracking_num_captured_frames - 1][1] = static_cast<double>(chirp_tracking_num_captured_chirps);
-                    captured_frames.buffer[frame_tracking_num_captured_frames - 1][2] = chirp_tracking_average_slope;
-                    captured_frames.buffer[frame_tracking_num_captured_frames - 1][3] = chirp_tracking_average_chirp_duration;
-
-                    //compute average chirp slope across all frames
-                    double sum_slopes = 0; //sum of all average chirp slopes
-                    double sum_count = 0; //sum of total number of chirps detected
-                    for (size_t i = 0; i < frame_tracking_num_captured_frames; i++)
-                    {
-                        sum_slopes += captured_frames.buffer[i][2] * (captured_frames.buffer[i][1] - 1);
-                        sum_count += captured_frames.buffer[i][1] - 1;
-                    }
-                    frame_tracking_average_chirp_slope_MHz_us = sum_slopes/sum_count;
+                    frame_tracking_average_chirp_slope_MHz_us = slope_MHz_us_estimator_buffer.get_mean();
                     
-                    //compute average chirp duration across all frames
-                    double sum_durations = 0; //sum of all average chirp durations
-                    sum_count = 0; //sum of total number of chirps detected
-                    for (size_t i = 0; i < frame_tracking_num_captured_frames; i++)
-                    {
-                        sum_durations += captured_frames.buffer[i][3] * (captured_frames.buffer[i][1] - 1);
-                        sum_count += captured_frames.buffer[i][1] - 1;
-                    }
-                    frame_tracking_average_chirp_duration_us = sum_durations/sum_count;
+                    //compute average chirp period
+                    frame_tracking_average_chirp_duration_us = chirp_period_us_estimator_buffer.get_mean();
                 }
                 
-                
                 //estimated frame start time
-                //captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] = detected_intercepts_us.buffer[0]; //time of first chirp
-
-                //if (victim_waveform_loaded)
-                if(false)
+                if (victim_waveform_loaded)
                 {
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] =
                         compute_precise_frame_start_time(detected_intercepts_us.buffer[0]);
@@ -1042,21 +1032,18 @@
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] = detected_intercepts_us.buffer[0];
                 }
                 
-
-                //compute frame duration, average frame duration, and predict next frame
+                //ocmpute frame duration, average frame duration, and predict next frame
                 if(frame_tracking_num_captured_frames > 1)
                 {
                     //compute and save frame duration
-                    captured_frames.buffer[frame_tracking_num_captured_frames - 1][0] =
-                        captured_frames.buffer[frame_tracking_num_captured_frames - 1][4]
-                        - captured_frames.buffer[frame_tracking_num_captured_frames - 2][4];
-                    
-                    // compute average frame duration
-                    frame_tracking_average_frame_duration_us = 
-                        (captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] -
-                        captured_frames.buffer[0][4])
-                        / static_cast<data_type>(frame_tracking_num_captured_frames - 1);
-                    
+                    frame_period_us_estimator_buffer.load_estimate_from_intercept(
+                        captured_frames.buffer[frame_tracking_num_captured_frames - 1][4],
+                        captured_frames.buffer[frame_tracking_num_captured_frames - 2][4]
+                    );
+
+                    //compute average frame duration
+                    frame_tracking_average_frame_duration_us = frame_period_us_estimator_buffer.get_mean();
+
                     //predict next frame - predict the time of the second chirp so that the attack doesn't interfere with the 1st chirp
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][5] = 
                         captured_frames.buffer[frame_tracking_num_captured_frames - 1][4]
