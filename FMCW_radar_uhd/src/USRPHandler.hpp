@@ -1380,7 +1380,7 @@
                         else if (rx_md.time_spec.get_real_secs() >= max_end_time)
                         {
                             std::cout << "USRPHandler::rx_record_next_frame: timed out while waiting for new chirp" << std::endl;
-                            continue;
+                            break;
                         }
                         
                         

@@ -68,9 +68,10 @@
             double frequency_resolution;
             double frequency_sampling_period;
             double detected_time_offset;
+        public: //public to allow for being saved offline
             std::vector<double> frequencies;
             std::vector<double> times;
-
+        private:
             //clustering parameters
             size_t min_points_per_chirp;
             int max_cluster_index;
@@ -363,31 +364,43 @@
                     config_good = false;
                 }
 
+                //check the spectrogram frequency sampling period
+                if(config["SensingSubsystemSettings"]["spectrogram_freq_sampling_period_s"].is_null()){
+                    std::cerr << "SpectrogramHandler::check_config: spectrogram_freq_sampling_period_s not specified" <<std::endl;
+                    config_good = false;
+                }
+                
+                //spectrogram peak detection threshold
                 if(config["SensingSubsystemSettings"]["spectogram_peak_detection_threshold_dB"].is_null()){
                     std::cerr << "SpectrogramHandler::check_config: spectogram peak detection threshold not specified" <<std::endl;
                     config_good = false;
                 }
 
+                //spectrogram min_points_per_chirp
                 if(config["SensingSubsystemSettings"]["min_points_per_chirp"].is_null()){
                     std::cerr << "SpectrogramHandler::check_config: min number of points per chirp not specified" <<std::endl;
                     config_good = false;
                 }
 
+                //precise timing estimate observation window time
                 if(config["SensingSubsystemSettings"]["precise_timing_estimate_observation_window_time_us"].is_null()){
                     std::cerr << "SpectrogramHandler::check_config: observation window time for precise timing not specified" <<std::endl;
                     config_good = false;
-                }
+                }  
 
+                //cross correlation maximum lag
                 if(config["SensingSubsystemSettings"]["precise_timing_estimate_max_xcorr_lag_samples"].is_null()){
                     std::cerr << "SpectrogramHandler::check_config: max xcorr lag samples for precise timing not specified" <<std::endl;
                     config_good = false;
                 }
 
+                //number of victim frames to capture
                 if(config["SensingSubsystemSettings"]["num_victim_frames_to_capture"].is_null()){
                     std::cerr << "SpectrogramHandler::check_config: num_victim_frames_to_capture not specified" <<std::endl;
                     config_good = false;
                 }
 
+                //maximum victim chirps to capture when performing parameter estimatino
                 if(config["SensingSubsystemSettings"]["max_victim_chirps_to_capture"].is_null()){
                     std::cerr << "SpectrogramHandler::check_config: max_victim_chirps_to_capture not specified" <<std::endl;
                     config_good = false;
@@ -426,16 +439,9 @@
                 FMCW_sampling_rate_Hz = config["USRPSettings"]["Multi-USRP"]["sampling_rate"].get<double>();
                 samples_per_buffer_rx_signal = config["USRPSettings"]["RX"]["spb"].get<size_t>();
 
-                //determine the frequency sampling period based on the sampling rate
-                double freq_sampling_period;
-                if (FMCW_sampling_rate_Hz > 500e6)
-                {
-                    freq_sampling_period = 0.5e-6;
-                }
-                else{
-                    freq_sampling_period = 2e-6;
-                }
-                
+                //determine the frequency sampling period based on the sampling rate                
+                double freq_sampling_period = config["SensingSubsystemSettings"]["spectrogram_freq_sampling_period_s"].get<double>();
+
                 //determine the number of samples per sampling window
                 samples_per_sampling_window = static_cast<size_t>(std::ceil(FMCW_sampling_rate_Hz * freq_sampling_period));
 
@@ -464,6 +470,15 @@
                 //set the peak detection threshold for the spectogram
                 peak_detection_threshold = config["SensingSubsystemSettings"]["spectogram_peak_detection_threshold_dB"].get<data_type>();
                 spectrogram_absolute_max_val = 0;
+
+                if (debug)
+                {
+                    std::cout << "SpectrogramHandler::initialize_spectrogram_params():" <<
+                        " fft_size = " << fft_size 
+                        << ", num_rows: " << num_rows_spectrogram 
+                        << ", samples_per_sampling_window: " << samples_per_sampling_window << std::endl;
+                }
+                
             }
 
 
@@ -544,23 +559,23 @@
                 }
 
                 //initialize the timing parameters and buffers
-                    //compute the timing offset
-                    frequency_sampling_period = 
-                            static_cast<double>(samples_per_sampling_window)/
-                                (FMCW_sampling_rate_Hz * 1e-6);
-                    
-                    detected_time_offset = frequency_sampling_period * 
-                                static_cast<double>(fft_size) / 2 /
-                                static_cast<double>(samples_per_sampling_window);
-                    
-                    //create the times buffer
-                    times = std::vector<double>(num_rows_spectrogram,0);
+                //compute the timing offset
+                frequency_sampling_period = 
+                        static_cast<double>(samples_per_sampling_window)/
+                            (FMCW_sampling_rate_Hz * 1e-6);
                 
-                    for (size_t i = 0; i < num_rows_spectrogram; i++)
-                    {
-                        times[i] = (frequency_sampling_period *
-                                    static_cast<double>(i)) + detected_time_offset;
-                    }
+                detected_time_offset = frequency_sampling_period * 
+                            static_cast<double>(fft_size) / 2 /
+                            static_cast<double>(samples_per_sampling_window);
+                
+                //create the times buffer
+                times = std::vector<double>(num_rows_spectrogram,0);
+            
+                for (size_t i = 0; i < num_rows_spectrogram; i++)
+                {
+                    times[i] = (frequency_sampling_period *
+                                static_cast<double>(i)) + detected_time_offset;
+                }
             }
 
             /**
@@ -911,9 +926,18 @@
                 {
                     //to be part of the same chirp, the frequency must increase, and the detected point
                     //must be with 5 us of the previous point
-                    if (((detected_frequencies.buffer[i] - detected_frequencies.buffer[i-1]) > 3) ||
+
+                    //TODO: Make these parameters tunable
+/*
+                    if (((detected_frequencies.buffer[i] - detected_frequencies.buffer[i-1]) > 1) ||
                         (((detected_times.buffer[i] - detected_times.buffer[i-1] < 5))) &&
-                        ((detected_frequencies.buffer[i] - detected_frequencies.buffer[i-1]) >= 0))
+                        ((detected_frequencies.buffer[i] - detected_frequencies.buffer[i-1]) >= -1))
+                    {
+*/
+                    //new approach: frequency must increase, and be above some minimum value
+
+                    if (((detected_frequencies.buffer[i] - detected_frequencies.buffer[i-1]) >= -1) &&
+                        (detected_frequencies.buffer[i] >= 2))
                     {
                         num_points_in_chirp += 1;
                     }
@@ -1011,9 +1035,33 @@
                     //determine the number of chirps detected
                     chirp_tracking_num_captured_chirps = detected_slopes_MHz_us.num_samples;
 
+/*
+                    //detected times and frequencies
+                    std::string folder_path = "/home/david/Documents/MATLAB_generated/cpp_sensed_parameters/";
+                    std::string path = folder_path + "cpp_detected_times.bin";
+                    detected_times.set_write_file(path,true);
+                    detected_times.save_to_file();
+                    path = folder_path + "cpp_detected_frequencies.bin";
+                    detected_frequencies.set_write_file(path,true);
+                    detected_frequencies.save_to_file();
+
+                    //computed clusters
+                    path = folder_path + "cpp_computed_clusters.bin";
+                    cluster_indicies.set_write_file(path,true);
+                    cluster_indicies.save_to_file();
+
+                    //spectrogram 
+                    path = folder_path + "cpp_generated_spectrogram.bin";
+                    generated_spectrogram.set_write_file(path,true);
+                    generated_spectrogram.save_to_file();
+*/                    
                     //save the estimates to the parameter estimator buffers
                     slope_MHz_us_estimator_buffer.load_estimates(detected_slopes_MHz_us.buffer);
                     chirp_period_us_estimator_buffer.load_estimates_from_intercepts(detected_intercepts_us.buffer);
+
+                    //TODO: move these somewhere else to make more efficient
+                    chirp_period_us_estimator_buffer.remove_outliers();
+                    
 
                     //compute average chirp slope
                     frame_tracking_average_chirp_slope_MHz_us = slope_MHz_us_estimator_buffer.get_mean();
@@ -1235,11 +1283,14 @@
              */
             void print_summary_of_estimated_parameters(){
                 std::cout << "SpectrogramHandler::print_summary_of_estimated_parameters: average frame duration: " <<
-                    frame_tracking_average_frame_duration_us * 1e-3 << "ms" <<std::endl;
+                    frame_period_us_estimator_buffer.get_mean() * 1e-3 << "ms" <<
+                    "(variance: " << frame_period_us_estimator_buffer.get_variance() << ")" << std::endl;
                 std::cout << "SpectrogramHandler::print_summary_of_estimated_parameters: average chirp duration: " <<
-                    frame_tracking_average_chirp_duration_us << "us" <<std::endl;
+                    chirp_period_us_estimator_buffer.get_mean() << "us" <<
+                    "(variance: " << chirp_period_us_estimator_buffer.get_variance() << ")" << std::endl;
                 std::cout << "SpectrogramHandler::print_summary_of_estimated_parameters: average chirp slope: " <<
-                    frame_tracking_average_chirp_slope_MHz_us << "MHz/us" <<std::endl;
+                    slope_MHz_us_estimator_buffer.get_mean() << "MHz/us" <<
+                    "(variance: " << slope_MHz_us_estimator_buffer.get_variance() << ")" << std::endl;
             }
 
             /**
@@ -1255,9 +1306,9 @@
                 Buffer_1D<double> estimated_parameters(3,false);
                  
                 // save the frame duration, chirp duration, and chirp slope
-                estimated_parameters.buffer[0] = frame_tracking_average_frame_duration_us * 1e-3; // ms
-                estimated_parameters.buffer[1] = frame_tracking_average_chirp_duration_us; // us
-                estimated_parameters.buffer[2] = frame_tracking_average_chirp_slope_MHz_us; // MHz/us
+                estimated_parameters.buffer[0] = frame_period_us_estimator_buffer.get_mean() * 1e-3; // ms
+                estimated_parameters.buffer[1] = chirp_period_us_estimator_buffer.get_mean(); // us
+                estimated_parameters.buffer[2] = slope_MHz_us_estimator_buffer.get_mean(); // MHz/us
 
                 //save the results to a file
                 std::string file_name;

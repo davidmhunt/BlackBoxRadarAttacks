@@ -145,6 +145,7 @@
 
                         std::cout << "run_attacker: running sensing_subsystem" <<std::endl;
                         sensing_subsystem.run(multiple_runs,run_number);
+                        std::cout << "run_attacker: sensing_subsystem_run_complete" <<std::endl;
                     }
                     else{
                         sensing_subsystem.run(multiple_runs,run_number);

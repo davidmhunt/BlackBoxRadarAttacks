@@ -1349,36 +1349,39 @@
              * 
              */
             void remove_outliers(){
-                //sort the samples
-                std::sort(Buffer_1D<data_type>::buffer.begin(), Buffer_1D<data_type>::buffer.end());
-
-                //compute the IQR range
-                size_t Q1_sample = static_cast<size_t>(std::ceil(0.25 * static_cast<double>(num_estimates)));
-                size_t Q3_sample = static_cast<size_t>(std::floor(0.75 * static_cast<double>(num_estimates)));
-
-                data_type IQR = Buffer_1D<data_type>::buffer[Q3_sample] - Buffer_1D<data_type>::buffer[Q1_sample];
-                data_type upper_fence = Buffer_1D<data_type>::buffer[Q3_sample] + 1.5 * IQR;
-                data_type lower_fence = Buffer_1D<data_type>::buffer[Q1_sample] - 1.5 * IQR;
-
-                //sweep through the samples and remove any outliers
-                size_t i = 0;
-                data_type val;
-                while (i < num_estimates)
-                {   
-                    val = Buffer_1D<data_type>::buffer[i];
-                    if ((val < lower_fence) || (val > upper_fence))
+                    if (num_estimates > 20)
                     {
-                        //remove the outlier
-                        Buffer_1D<data_type>::remove_item(i);
-                        num_estimates -= 1;
-                        buffer_full = false; //buffer would no longer be full
-                    }else
-                    {
-                        i++;
+                        //sort the samples
+                        std::sort(Buffer_1D<data_type>::buffer.begin(), Buffer_1D<data_type>::buffer.begin() + num_estimates);
+
+                        //compute the IQR range
+                        size_t Q1_sample = static_cast<size_t>(std::ceil(0.25 * static_cast<double>(num_estimates)));
+                        size_t Q3_sample = static_cast<size_t>(std::floor(0.75 * static_cast<double>(num_estimates)));
+
+                        data_type IQR = Buffer_1D<data_type>::buffer[Q3_sample] - Buffer_1D<data_type>::buffer[Q1_sample];
+                        data_type upper_fence = Buffer_1D<data_type>::buffer[Q3_sample] + 1.5 * IQR;
+                        data_type lower_fence = Buffer_1D<data_type>::buffer[Q1_sample] - 1.5 * IQR;
+
+                        //sweep through the samples and remove any outliers
+                        size_t i = 0;
+                        data_type val;
+                        while (i < num_estimates)
+                        {   
+                            val = Buffer_1D<data_type>::buffer[i];
+                            if ((val < lower_fence) || (val > upper_fence))
+                            {
+                                //remove the outlier
+                                Buffer_1D<data_type>::remove_item(i);
+                                num_estimates -= 1;
+                                buffer_full = false; //buffer would no longer be full
+                            }else
+                            {
+                                i++;
+                            }
+                        }
+                        //update the statistics after the outliers have been removed
+                        update_statistics();
                     }
-                }
-                //update the statistics after the outliers have been removed
-                update_statistics();
                 return;
             }
 

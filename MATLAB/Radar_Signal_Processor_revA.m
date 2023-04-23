@@ -124,10 +124,10 @@ classdef Radar_Signal_Processor_revA < handle
                 frequency components in a signal
             %}
             
-%             obj.Fp = 2 * 1e6; %for sensing subsystem tests                                  
-%             obj.Fst = 5 * 1e6; %for sensing subsystem tests
-            obj.Fp = 7 * 1e6;                                  %start frequency of pass band
-            obj.Fst = 13 * 1e6;                                 %start of stop band 
+            obj.Fp = 2 * 1e6; %for sensing subsystem tests                                  
+            obj.Fst = 5 * 1e6; %for sensing subsystem tests
+%             obj.Fp = 7 * 1e6;                                  %start frequency of pass band
+%             obj.Fst = 13 * 1e6;                                 %start of stop band 
             obj.Ap = 0.5;                                       %ripple to allow in the pass band
             obj.Ast = 40;                                       %attenuation in the stop band
             obj.Fs = obj.Radar.FMCW_sampling_rate_Hz;           %sampling frequency of the Radar object
@@ -219,8 +219,9 @@ classdef Radar_Signal_Processor_revA < handle
             obj.PFAR = 1e-8;
             
             %calculate training region size
-            range_training_size = min(8,ceil(obj.Radar.ADC_Samples * 0.05));
-            velocity_training_size = max(3,ceil(obj.Radar.NumChirps * 0.05));
+            %previously used .05 * num samples and num chirps
+            range_training_size = min(8,ceil(obj.Radar.ADC_Samples * 0.2)); %use 8,0.05 for higher BW
+            velocity_training_size = max(3,ceil(obj.Radar.NumChirps * 0.1)); % use 3,0.05 for higher BW
             
             %put guard and training region sizes into arrays for the CFAR detector
             obj.guard_region = [2,1];

@@ -282,29 +282,42 @@
                  * 
                  */
                 void save_sensing_subsystem_state(void){
-                    //save the hanning window to a file to confirm correctness
+                    //hanning window
                     std::string folder_path = spectrogram_handler.save_file_path;
                     std::string path;
                     path = folder_path + "cpp_hanning_window.bin";
                     spectrogram_handler.hanning_window.set_write_file(path);
                     spectrogram_handler.hanning_window.save_to_file();
                     
-                    //load and reshape the received signal to confirm correctness
+                    //reshaped and windowed signal
                     path = folder_path + "cpp_reshaped_and_windowed_for_fft.bin";
                     spectrogram_handler.reshaped__and_windowed_signal_for_fft.set_write_file(path,true);
                     spectrogram_handler.reshaped__and_windowed_signal_for_fft.save_to_file();
 
-                    //compute the fft to confirm correctness
+                    //generated spectrogram
                     path = folder_path + "cpp_generated_spectrogram.bin";
                     spectrogram_handler.generated_spectrogram.set_write_file(path,true);
                     spectrogram_handler.generated_spectrogram.save_to_file();
 
-                    //detect the points in the spectrogram
+                    //spectrogram times
+                    path = folder_path + "cpp_spectrogram_times.bin";
+                    Buffer_1D<double> spectrogram_times(spectrogram_handler.times);
+                    spectrogram_times.set_write_file(path,true);
+                    spectrogram_times.save_to_file();
+
+
+                    //spectrogram frequencies
+                    path = folder_path + "cpp_spectrogram_frequencies.bin";
+                    Buffer_1D<double> spectrogram_frequencies(spectrogram_handler.frequencies);
+                    spectrogram_frequencies.set_write_file(path,true);
+                    spectrogram_frequencies.save_to_file();
+
+                    //detected points
                     path = folder_path + "cpp_spectrogram_point_vals.bin";
                     spectrogram_handler.spectrogram_points_values.set_write_file(path,true);
                     spectrogram_handler.spectrogram_points_values.save_to_file();
 
-                    //detect the times and frequencies
+                    //detected times and frequencies
                     path = folder_path + "cpp_detected_times.bin";
                     spectrogram_handler.detected_times.set_write_file(path,true);
                     spectrogram_handler.detected_times.save_to_file();
@@ -312,12 +325,12 @@
                     spectrogram_handler.detected_frequencies.set_write_file(path,true);
                     spectrogram_handler.detected_frequencies.save_to_file();
 
-                    //compute the clusters
+                    //computed clusters
                     path = folder_path + "cpp_computed_clusters.bin";
                     spectrogram_handler.cluster_indicies.set_write_file(path,true);
                     spectrogram_handler.cluster_indicies.save_to_file();
 
-                    //fit linear models
+                    // linear models
                     path = folder_path + "cpp_detected_slopes.bin";
                     spectrogram_handler.detected_slopes_MHz_us.set_write_file(path,true);
                     spectrogram_handler.detected_slopes_MHz_us.save_to_file();
@@ -325,7 +338,7 @@
                     spectrogram_handler.detected_intercepts_us.set_write_file(path,true);
                     spectrogram_handler.detected_intercepts_us.save_to_file();
 
-                    //compute victim parameters
+                    //computed victim parameters
                     path = folder_path + "cpp_captured_frames.bin";
                     spectrogram_handler.captured_frames.set_write_file(path,true);
                     spectrogram_handler.captured_frames.save_to_file();

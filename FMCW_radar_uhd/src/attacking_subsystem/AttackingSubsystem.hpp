@@ -446,16 +446,12 @@
                     //calculated computed victim parameters
                     calculate_victim_parameters();
 
-                    //unlock the mutex - updating victim parameters now complete
-                    victim_parameters_lock.unlock();
-
                     //compute values of t
                     t_sec = std::vector<double>(num_samples_per_chirp);
                     for (size_t i = 0; i < num_samples_per_chirp; i++)
                     {
                         t_sec[i] = static_cast<double>(i) * FMCW_sampling_period_s;
                     }
-
                     //initialize the victim waveform buffer to be the correct size
                     victim_waveform.set_buffer_size(num_samples_per_chirp);
 
@@ -467,7 +463,11 @@
 
                     //set flag noting that a victim waveform has been loaded
                     victim_waveform_loaded = true;
+
                     victim_parameters_loaded = true;
+
+                    //unlock the mutex - updating victim parameters now complete
+                    victim_parameters_lock.unlock();
                 }
                 
                 /**
@@ -521,12 +521,23 @@
                     bool sim_vel_enable = config["AttackSubsystemSettings"]["sim_vel_attack_enable"].get<bool>();
                     bool sim_slope_enable = config["AttackSubsystemSettings"]["sim_slope_attack_enable"].get<bool>();
 
+                    //lock the mutex so that the attacking thread isn't trying to read paramter estimations while updating them at the same time
+                    std::unique_lock<std::mutex> victim_parameters_lock(victim_parameters_mutex, std::defer_lock);
+
+                    //lock the mutex
+                    victim_parameters_lock.lock();
+                    bool param_loaded_status = victim_parameters_loaded;
+                    victim_parameters_lock.unlock();
+                    
                     //wait until a victim configuration has been loaded
                     while (not get_sensing_complete())
                     {
-                        if (not victim_parameters_loaded)
+                        if (not param_loaded_status)
                         {
                             std::this_thread::sleep_for(std::chrono::milliseconds(int64_t(1)));
+                            victim_parameters_lock.lock();
+                            param_loaded_status = victim_parameters_loaded;
+                            victim_parameters_lock.unlock();
                         }
                         else
                         {
