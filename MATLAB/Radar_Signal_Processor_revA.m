@@ -124,8 +124,8 @@ classdef Radar_Signal_Processor_revA < handle
                 frequency components in a signal
             %}
             
-            obj.Fp = 2 * 1e6; %for sensing subsystem tests                                  
-            obj.Fst = 5 * 1e6; %for sensing subsystem tests
+            obj.Fp = 9 * 1e6; %for sensing subsystem tests                                  
+            obj.Fst = 12 * 1e6; %for sensing subsystem tests
 %             obj.Fp = 7 * 1e6;                                  %start frequency of pass band
 %             obj.Fst = 13 * 1e6;                                 %start of stop band 
             obj.Ap = 0.5;                                       %ripple to allow in the pass band
@@ -171,7 +171,8 @@ classdef Radar_Signal_Processor_revA < handle
                 'SampleRate',obj.Radar.ADC_SampleRate_MSps * 1e6, ...
                 'SweepSlope',obj.Radar.FrequencySlope_MHz_us * 1e12,...
                 'DechirpInput',false,...
-                'RangeFFTLengthSource','Auto',...
+                'RangeFFTLengthSource','Property',...
+                'RangeFFTLength',obj.Radar.ADC_Samples,...
                 'RangeWindow',"Hann",...
                 'ReferenceRangeCentered',false,...
                 'ReferenceRange',0.0,...
@@ -220,7 +221,7 @@ classdef Radar_Signal_Processor_revA < handle
             
             %calculate training region size
             %previously used .05 * num samples and num chirps
-            range_training_size = min(8,ceil(obj.Radar.ADC_Samples * 0.2)); %use 8,0.05 for higher BW
+            range_training_size = min(2,ceil(obj.Radar.ADC_Samples * 0.2)); %use 8,0.05 for higher BW
             velocity_training_size = max(3,ceil(obj.Radar.NumChirps * 0.1)); % use 3,0.05 for higher BW
             
             %put guard and training region sizes into arrays for the CFAR detector

@@ -741,7 +741,7 @@
                                 std::exp(
                                     std::complex<data_type>(0,
                                         static_cast<data_type>(
-                                            M_PI * estimated_frequency_slope_MHz_us * 1e12 *
+                                            M_PI * slope_MHz_us * 1e12 *
                                             std::pow(t_actual,2) + phase_shift_rad
                                         ))
                                 );
@@ -774,7 +774,7 @@
                     double spoof_time_delay_s = compute_spoof_time_delay_s(spoof_distance_m,similar_slope_attack,spoof_slope_MHz_us);
                     //double spoof_power_scaling = compute_spoof_power_scaling(spoof_distance_m,(similar_slope_attack || similar_velocity_attack));
                     //TODO: re-enable power scaling and refine the method further
-                    double spoof_power_scaling = 1.0;
+                    double spoof_power_scaling = 0.5;
                     std::vector<double> phase_shifts(chirps_per_frame,0);
                     compute_spoof_chirp_phase_shifts_rad(phase_shifts,spoof_velocity_m_s,similar_velocity_attack);
 
@@ -784,7 +784,8 @@
                         spoof_slope_MHz_us,
                         spoof_time_delay_s,
                         phase_shifts,
-                        spoof_power_scaling                    );
+                        spoof_power_scaling
+                        );
 
                     auto stop = high_resolution_clock::now();
                     auto duration = duration_cast<microseconds>(stop - start);
@@ -820,7 +821,7 @@
                     double spoof_time_delay_s,
                     std::vector<double> & phase_shifts,
                     double spoof_power_scaling,
-                    size_t max_threads = 4)
+                    size_t max_threads = 8)
                 {
                     std::vector<std::thread> threads;
                     const size_t num_threads = std::min(chirps_per_frame, max_threads);
@@ -883,7 +884,8 @@
                     double time_delay_s = (2 * spoof_distance_m - current_victim_pos_m)/c_m_s;
 
                     //compute an additional time delay if a similar_slope_attack is enabled
-                    if (similar_slope_attack)
+                    //if (similar_slope_attack)
+                    if (false)
                     {
                         double additional_time_delay_s;
                         if (FMCW_sampling_rate_Hz >= (50 * 1e6))
@@ -893,8 +895,8 @@
                         }
                         else
                         {
-                            additional_time_delay_s = (0.4 * FMCW_sampling_rate_Hz * 1e-6 *
-                                (1/estimated_frequency_slope_MHz_us - 1/slope_MHz_us)) * 1e-6;
+                            additional_time_delay_s = (0.6 * FMCW_sampling_rate_Hz * 1e-6 *
+                                (1/estimated_frequency_slope_MHz_us - 1/slope_MHz_us)) * 1e-6; //was previously 0.4 * FMCW
                         }
                         time_delay_s += additional_time_delay_s;
                     }
@@ -988,8 +990,15 @@
                             return estimated_frequency_slope_MHz_us + (estimated_frequency_slope_MHz_us * 0.015);
                         }
                         else
-                        {
-                            return estimated_frequency_slope_MHz_us + (estimated_frequency_slope_MHz_us * 0.03);   
+                        {   
+                            //TODO: tune this parameter - preiously 0.03
+                            double range_span_m = 75;
+                            double delta_IF_MHz = 2 * estimated_frequency_slope_MHz_us * 1e6 * range_span_m / c_m_s;
+                            double additional_slope_MHz_us = delta_IF_MHz / estimated_chirp_cycle_time_us;
+                            return estimated_frequency_slope_MHz_us + additional_slope_MHz_us;
+
+                            //previous computation
+                            //return estimated_frequency_slope_MHz_us + (estimated_frequency_slope_MHz_us * 5);   
                         }
                         
                     }

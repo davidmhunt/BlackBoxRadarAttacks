@@ -1060,7 +1060,8 @@
                     chirp_period_us_estimator_buffer.load_estimates_from_intercepts(detected_intercepts_us.buffer);
 
                     //TODO: move these somewhere else to make more efficient
-                    chirp_period_us_estimator_buffer.remove_outliers();
+                    chirp_period_us_estimator_buffer.remove_outliers(200);
+                    slope_MHz_us_estimator_buffer.remove_outliers(200);
                     
 
                     //compute average chirp slope
@@ -1079,6 +1080,9 @@
                 else{
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][4] = detected_intercepts_us.buffer[0];
                 }
+
+                //TODO:move to make more efficient
+                frame_period_us_estimator_buffer.remove_outliers(10);
                 
                 //ocmpute frame duration, average frame duration, and predict next frame
                 if(frame_tracking_num_captured_frames > 1)
