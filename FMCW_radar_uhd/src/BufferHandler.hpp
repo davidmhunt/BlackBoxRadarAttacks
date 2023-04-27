@@ -396,7 +396,7 @@
                     if ((rows != num_rows) || (cols != num_cols) || (excess != excess_samples))
                     {
                         //initialize a new buffer with the correct dimmensions
-                        buffer = std::vector<std::vector<data_type>>(rows,std::vector<data_type>(cols));
+                        buffer = std::vector<std::vector<data_type>>(rows,std::vector<data_type>(cols,0));
                         num_rows = rows;
                         num_cols = cols;
                         excess_samples = excess;
