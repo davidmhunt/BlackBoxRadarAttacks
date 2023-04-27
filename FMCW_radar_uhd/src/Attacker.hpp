@@ -133,19 +133,30 @@
                     size_t run_number = 0){
                     usrp_handler.reset_usrp_clock();
 
+                    std::vector<std::thread> threads;
+
                     if (attacking_subsystem.enabled)
                     {
-                        std::thread attacking_subsystem_thread([&]() {
+                        threads.emplace_back([&]() {
+                            //TODO: Appears that an exception is occuring here. Appears to be occuring at the end of the function (right before the else statement)
+                            std::cout << "run_attacker: running attacking_subsystem" <<std::endl;
                             attacking_subsystem.run();
                         });
 
+                        std::cout << "run_attacker: running sensing_subsystem" <<std::endl;
                         sensing_subsystem.run(multiple_runs,run_number);
-
-                        attacking_subsystem_thread.join();
+                        std::cout << "run_attacker: sensing_subsystem_run_complete" <<std::endl;
                     }
                     else{
                         sensing_subsystem.run(multiple_runs,run_number);
                     }
+
+                    //if any threads were spawned, join with them here
+                    for (auto& thread: threads)
+                    {
+                        thread.join();
+                    }
+                    return;
                 }
 
                 /**

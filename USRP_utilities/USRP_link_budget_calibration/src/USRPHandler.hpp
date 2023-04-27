@@ -11,6 +11,7 @@
     #include <thread>
     #include <mutex>
     #include <stdexcept>
+    #include <atomic>
 
     //uhd specific libraries
     #include <uhd/exception.hpp>
@@ -32,14 +33,10 @@
 
     //user generated header files
     #include "BufferHandler.hpp"
-    #include "sensing_subsystem/EnergyDetector.hpp"
-    #include "sensing_subsystem/SpectrogramHandler.hpp"
 
     using json = nlohmann::json;
     using Buffers::Buffer_2D;
     using Buffers::Buffer_1D;
-    using EnergyDetector_namespace::EnergyDetector;
-    using SpectrogramHandler_namespace::SpectrogramHandler;
 
     namespace USRPHandler_namespace {
         
@@ -1296,122 +1293,6 @@
                             overflow_detected = false;
                             break;
                         }
-                    }
-                    return;
-                }
-
-                /**
-                 * @brief Saves a continuous stream of samples until a given 2D buffer has been filled
-                 * 
-                 * @param sensing_subsystem the sensing subsystem object
-                 */
-                void rx_record_next_frame(SpectrogramHandler<data_type> * spectrogram_handler,
-                                            EnergyDetector<data_type> * energy_detector,
-                                            double stream_start_time,
-                                            double max_waiting_time = 1){
-                    
-                    
-                    //determine the number of samples per buffer
-                    size_t num_samps_per_buff = spectrogram_handler -> rx_buffer.num_cols;
-
-                    //determine number of rows in the rx buffer
-                    size_t num_rows = spectrogram_handler -> rx_buffer.num_rows;
-
-                    //set the number of rows for energy detection (i.e: the number of rows prior to a chirp detection)
-                    size_t num_energy_detection_rows = energy_detector -> num_rows_chirp_detector;
-                    
-                    //compute the number of samples to stream after a chirp is detected
-                    size_t total_samps = num_samps_per_buff * (num_rows - num_energy_detection_rows);
-
-                    //reset the overflow message
-                    overflow_detected = false;
-                    rx_first_buffer = true;
-
-                    //initialize the stream command
-                    double current_time = usrp -> get_time_now().get_real_secs();
-                    //uhd::stream_cmd_t rx_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
-                    uhd::stream_cmd_t rx_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
-                    rx_stream_cmd.num_samps = num_samps_per_buff;
-
-                    if ((stream_start_time - current_time) >= 1e-3)
-                    {
-                        rx_stream_cmd.time_spec = uhd::time_spec_t(stream_start_time);
-                        rx_stream_cmd.stream_now = false;
-                    }
-                    else{
-                        rx_stream_cmd.stream_now = true;
-                    }
-                    
-                    //detemine the maximum waiting time for deteting a chirp
-                    double max_end_time = current_time + max_waiting_time;
-
-                    //initialize tracking for detecting overflows
-                    size_t num_samps_received;
-                    size_t num_total_samps_received = 0;
-                    size_t expected_samps_to_receive = num_samps_per_buff;
-
-                    //initialize chirp tracking
-                    bool chirp_detected = false;
-                    size_t current_idx;
-                    energy_detector -> reset_chirp_detector();
-                    
-                    //send the stream command
-                    rx_stream -> issue_stream_cmd(rx_stream_cmd);
-
-                    while (! chirp_detected)
-                    {
-                        //receive the data
-                        current_idx = energy_detector -> get_current_chirp_detector_index();
-                        num_samps_received = rx_stream -> recv(
-                                        &(energy_detector->chirp_detector_signal.buffer[current_idx].front()),
-                                        num_samps_per_buff,rx_md,0.5,true);
-                        
-                        //check the metadata to confirm good receive
-                        if ((num_samps_received != expected_samps_to_receive) &&
-                            (rx_md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW)){
-                            std::cerr << "USRPHandler::rx_record_next_frame: (overflowed) Tried receiving " << expected_samps_to_receive <<
-                                        " samples when waiting for chirp, but only received " << num_samps_received << std::endl;
-                        }
-                        check_rx_metadata(rx_md);
-                        
-                        if(rx_md.time_spec.get_real_secs() <= stream_start_time){
-                            continue;
-                        }
-                        else if (rx_md.time_spec.get_real_secs() >= max_end_time)
-                        {
-                            std::cout << "USRPHandler::rx_record_next_frame: timed out while waiting for new chirp" << std::endl;
-                            break;
-                        }
-                        
-                        
-                        chirp_detected = energy_detector -> check_for_chirp(rx_md.time_spec.get_real_secs());
-                    }
-                    
-                    //send a new stream command
-                    if(debug)
-                    {
-                        std::cout << "USRPHandler::rx_record_next_frame: detected chirp" << std::endl;
-                    }
-                    rx_stream_cmd.stream_mode = uhd::stream_cmd_t::STREAM_MODE_NUM_SAMPS_AND_DONE;
-                    rx_stream_cmd.num_samps = total_samps;
-                    rx_stream_cmd.stream_now = true;
-                    rx_stream -> issue_stream_cmd(rx_stream_cmd);
-
-                    for (size_t i = num_energy_detection_rows; i < num_rows; i++)
-                    {
-                        //receive the data
-                        num_samps_received = rx_stream -> recv(
-                                        &(spectrogram_handler->rx_buffer.buffer[i].front()),
-                                        num_samps_per_buff,rx_md,0.5,true);
-                        
-                        num_total_samps_received += num_samps_received;
-                        
-                        //check the metadata to confirm good receive
-                        if (num_samps_received != expected_samps_to_receive){
-                            std::cout << "USRPHandler::rx_record_next_frame: Tried receiving " << expected_samps_to_receive <<
-                                        " samples when spectrogram sensing, but only received " << num_samps_received << std::endl;
-                        }
-                        check_rx_metadata(rx_md);
                     }
                     return;
                 }

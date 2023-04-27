@@ -1347,9 +1347,8 @@
             /**
              * @brief Removes outliers from the parameter estimates by looking for samples that are 1.5 * IQR away from the Q3 or Q1 samples (quartiles)
              * 
-             * @param min_samples the minimum number of samples required before outliers can be removed
              */
-            void remove_outliers(size_t min_samples = 20){
+            void remove_outliers(){
                     if (num_estimates > 20)
                     {
                         //sort the samples

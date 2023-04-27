@@ -7,7 +7,7 @@
             "addrs": "109.222",
             "ref":"internal",
             "sampling_rate":25.00e6,
-            "center_freq":1.5e9,
+            "center_freq":3.0e9,
             "lo-offset":0.0,
             "IF_filter_bw":25.00e6,
             "wirefmt":"sc16",
@@ -17,20 +17,20 @@
         },
         "TX":{
             "enabled":true,
-            "spb":0,
+            "spb":2040,
             "gain":50,
             "ant":"TX/RX",
             "subdev":"A:A A:B",
-            "channel":1
+            "channel":0
         },
         "RX":{
             "enabled":true,
-            "spb":0,
+            "spb":2040,
             "spp":0,
-            "gain":30,
+            "gain":50,
             "ant":"RX2",
             "subdev":"A:A A:B",
-            "channel": 1,
+            "channel":0,
             "offset_us": 6.63897
         },
         "AdditionalSettings":{
@@ -41,12 +41,21 @@
             "debug":false
         }
     },
-    "RadarSettings":{
-        "tx_file_folder_path":"/home/david/Documents/MATLAB_generated/MATLAB_full_chirps/",
-        "rx_file_folder_path":"/home/david/Documents/MATLAB_generated/cpp_rx_data_files/",
-        "num_chirps": 256,
-        "num_frames": 60,
-        "frame_periodicity_ms": 500,
-        "debug":false
+    "LinkBudgetCalibratorSettings":{
+        "debug":true,
+        "save_file_path": "/home/david/Documents/MATLAB_generated/cpp_sensed_parameters/"
+    },
+    "EnergyDetectorSettings":{
+        "enabled":true,
+        "noise_power_measurement_time_ms":10
+    },
+    "ToneTransmitterSettings":{
+        "enabled": true,
+        "tone_baseband_frequency_Hz": 25e6,
+        "load_signal_from_file":false,
+        "tone_signal_folder_path": "",
+        "tone_period_ms": 100,
+        "frame_periodicity_ms": 110,
+        "num_frames":1
     }
 }
