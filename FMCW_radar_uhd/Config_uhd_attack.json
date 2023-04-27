@@ -18,7 +18,7 @@
         "TX":{
             "enabled":true,
             "spb":2040,
-            "gain":50,
+            "gain":55,
             "ant":"TX/RX",
             "subdev":"A:A A:B",
             "channel":0
@@ -42,7 +42,7 @@
         }
     },
     "SensingSubsystemSettings":{
-        "energy_detection_threshold_dB":10,
+        "energy_detection_threshold_dB":7,
         "noise_power_measurement_time_ms":3,
         "energy_detector_num_rows_chirp_detector":2,
         "min_recording_time_ms": 10,
@@ -54,7 +54,7 @@
         "max_victim_chirps_to_capture":800,
         "num_victim_frames_to_capture": 30,
         "min_frame_periodicity_ms": 400,
-        "max_waiting_time_ms": 1000,
+        "max_waiting_time_ms": 60e3,
         "debug": true,
         "save_file_path": "/home/david/Documents/MATLAB_generated/cpp_sensed_parameters/"
     },
@@ -66,7 +66,7 @@
         "current_victim_vel_m_s": -40,
         "FP_spoof_enable":true,
         "FP_spoof_distances_m": [150,200],
-        "FP_spoof_vels_m_s": [-20,5],
+        "FP_spoof_vels_m_s": [-20,7],
         "FN_spoof_enable": true,
         "FN_spoof_distance_m": 50,
         "FN_spoof_vel_m_s": -10,

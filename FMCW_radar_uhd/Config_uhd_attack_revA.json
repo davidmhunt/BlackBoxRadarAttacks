@@ -54,7 +54,7 @@
         "max_victim_chirps_to_capture":800,
         "num_victim_frames_to_capture": 30,
         "min_frame_periodicity_ms": 400,
-        "max_waiting_time_ms": 1000,
+        "max_waiting_time_ms": 1e3,
         "debug": true,
         "save_file_path": "/home/david/Documents/MATLAB_generated/cpp_sensed_parameters/"
     },
@@ -62,7 +62,7 @@
         "enabled": true,
         "num_attack_frames": 15,
         "attack_start_frame": 7,
-        "current_victim_pos_m": 0.0,
+        "current_victim_pos_m": 10.0,
         "current_victim_vel_m_s": -40,
         "FP_spoof_enable":true,
         "FP_spoof_distances_m": [150,200],
