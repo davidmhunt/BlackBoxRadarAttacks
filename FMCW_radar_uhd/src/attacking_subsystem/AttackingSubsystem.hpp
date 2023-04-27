@@ -491,7 +491,7 @@
                     
                     //set the victim position
                     double victim_pos_m = config["AttackSubsystemSettings"]["current_victim_pos_m"].get<double>();
-                    double victim_vel_m_s =  config["AttackSubsystemSettings"]["current_victim_pos_m"].get<double>();
+                    double victim_vel_m_s =  config["AttackSubsystemSettings"]["current_victim_vel_m_s"].get<double>();
                     set_victim_pos_vel(victim_pos_m,victim_vel_m_s);
 
                     //configure FN spoofing
@@ -965,7 +965,7 @@
                     double spoof_time_delay_s = compute_spoof_time_delay_s(spoof_distance_m,similar_slope_attack,spoof_slope_MHz_us);
                     //double spoof_power_scaling = compute_spoof_power_scaling(spoof_distance_m,(similar_slope_attack || similar_velocity_attack));
                     //TODO: re-enable power scaling and refine the method further
-                    double spoof_power_scaling = 0.5;
+                    double spoof_power_scaling = 0.25;
                     std::vector<double> phase_shifts(chirps_per_frame,0);
                     compute_spoof_chirp_phase_shifts_rad(phase_shifts,spoof_velocity_m_s,similar_velocity_attack);
 
@@ -1123,6 +1123,7 @@
 
                     if(! similar_velocity_attack){
                         //compute the phase shift at each chirp
+
                         double phase_shift_per_chirp = 
                             4 * M_PI * (spoof_velocity_m_s - (current_victim_vel_m_s/2)) *
                              estimated_chirp_cycle_time_us * 1e-6 / lambda_m;
