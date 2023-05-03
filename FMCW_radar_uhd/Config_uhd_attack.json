@@ -43,18 +43,18 @@
     },
     "SensingSubsystemSettings":{
         "energy_detection_threshold_dB":7,
-        "noise_power_measurement_time_ms":3,
+        "noise_power_measurement_time_ms":5,
         "energy_detector_num_rows_chirp_detector":2,
-        "min_recording_time_ms": 10,
-        "spectrogram_freq_sampling_period_s": 15.0e-6,
+        "min_recording_time_ms": 2,
+        "spectrogram_freq_sampling_period_s": 2.0e-6,
         "spectogram_peak_detection_threshold_dB": 5,
         "min_points_per_chirp": 5,
         "precise_timing_estimate_observation_window_time_us": 10,
         "precise_timing_estimate_max_xcorr_lag_samples": 400,
         "max_victim_chirps_to_capture":800,
-        "num_victim_frames_to_capture": 30,
-        "min_frame_periodicity_ms": 400,
-        "max_waiting_time_ms": 60e3,
+        "num_victim_frames_to_capture": 12,
+        "min_frame_periodicity_ms": 20,
+        "max_waiting_time_ms": 1e3,
         "debug": true,
         "save_file_path": "/home/david/Documents/MATLAB_generated/cpp_sensed_parameters/"
     },
@@ -72,6 +72,6 @@
         "FN_spoof_vel_m_s": -10,
         "sim_vel_attack_enable":true,
         "sim_slope_attack_enable":true,
-        "debug":true
+        "debug":false
     }
 }

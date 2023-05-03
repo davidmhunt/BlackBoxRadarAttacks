@@ -194,7 +194,7 @@ classdef Radar_Signal_Processor_revA < handle
 
             %set key parameters for the range estimator
             obj.NumEstimatesSource_rng = 'Property';
-            obj.NumEstimates_rng = 5;
+            obj.NumEstimates_rng = 15; %previously 5
             obj.ClusterInputPort_rng = true;
 
             %initialize the range estimator
@@ -205,7 +205,7 @@ classdef Radar_Signal_Processor_revA < handle
 
             %set key parameters for the range estimator
             obj.NumEstimatesSource_dplr = 'Property';
-            obj.NumEstimates_dplr = 5;
+            obj.NumEstimates_dplr = 15; %previously 5
             obj.ClusterInputPort_dplr = true;
 
             %initialize the range estimator
@@ -221,11 +221,11 @@ classdef Radar_Signal_Processor_revA < handle
             
             %calculate training region size
             %previously used .05 * num samples and num chirps
-            range_training_size = min(2,ceil(obj.Radar.ADC_Samples * 0.2)); %use 8,0.05 for higher BW
-            velocity_training_size = max(3,ceil(obj.Radar.NumChirps * 0.1)); % use 3,0.05 for higher BW
+            range_training_size = min(5,ceil(obj.Radar.ADC_Samples * 0.05)); %use 8,0.05 for higher BW
+            velocity_training_size = max(5,ceil(obj.Radar.NumChirps * 0.05)); % use 3,0.05 for higher BW
             
             %put guard and training region sizes into arrays for the CFAR detector
-            obj.guard_region = [2,1];
+            obj.guard_region = [2,1]; %previously [2,1]
             obj.training_region = [range_training_size,velocity_training_size];
             
             %compute the max and min indicies for the cells under test
@@ -271,8 +271,8 @@ classdef Radar_Signal_Processor_revA < handle
             DBScan algorithm used to identify radar clusters
         %}
 
-            obj.Epsilon = 2;
-            obj.minpts = 3;
+            obj.Epsilon = 3; %previously 2
+            obj.minpts = 5; %was previously 3
         end       
         
         function reset_radar_cube(obj)

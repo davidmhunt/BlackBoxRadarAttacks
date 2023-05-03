@@ -291,9 +291,9 @@
                         if (enabled)
                         {
                             init_frame_start_times_buffer();
+                            //initialize spoofing parameters
+                            
                         }
-                        
-                        //initialize spoofing parameters
                         //TODO: replace this functionality with real time updating in the future
                         init_spoofing_parameters();
                         
@@ -539,7 +539,7 @@
                     calculate_victim_parameters();
 
                     //compute values of t
-                    t_sec = std::vector<double>(num_samples_per_chirp);
+                    t_sec.resize(num_samples_per_chirp,0.0);
                     for (size_t i = 0; i < num_samples_per_chirp; i++)
                     {
                         t_sec[i] = static_cast<double>(i) * FMCW_sampling_period_s;
@@ -702,10 +702,13 @@
                 void reset(){
                     //TODO: fix this function
                     init_attack_subsystem_parameters();
+                    init_estimated_parameter_values();
                     if (enabled)
                     {
+                        init_frame_start_times_buffer();
                         
                     }
+                    init_spoofing_parameters();
                 }
 
                 /**
@@ -927,7 +930,7 @@
                     
                     //if debug is enabled print the time taken to compute the waveform
                     if(debug){
-                        std::cout << "AttackingSubsystem::compute_spoofing_signals: Time taken to compute" << num_spoofing_signals <<   
+                        std::cout << "AttackingSubsystem::compute_spoofing_signals: Time taken to compute " << num_spoofing_signals <<   
                         " waveforms: " << duration.count() << " microseconds" << std::endl;
                     }
 
@@ -1068,12 +1071,14 @@
                         samples_per_buffer,
                         num_samples_per_chirp,
                         chirps_per_frame,
-                        false);
+                        true); //reset the vector to all zeros
                     
                     //configure the buffer that will be used when computing the attack signals for each chirp
                     attack_chirps_buffer.reconfigure(
                         chirps_per_frame,
-                        num_samples_per_chirp);
+                        num_samples_per_chirp,
+                        0,
+                        true); //reset the vector to all zeros
                 }
 
                 /**

@@ -389,11 +389,12 @@
                  * @param rows 
                  * @param cols 
                  * @param excess 
+                 * @param reset - resets the vector to all zeros on True. On False, only resets if the size has changed
                  */
-                void reconfigure(size_t rows, size_t cols,size_t excess = 0){
+                void reconfigure(size_t rows, size_t cols,size_t excess = 0, bool reset = true){
                     
                     //check to see if the dimmensions are new. Only compute a new buffer if the dimmensions or excess has changed
-                    if ((rows != num_rows) || (cols != num_cols) || (excess != excess_samples))
+                    if (reset || (rows != num_rows) || (cols != num_cols) || (excess != excess_samples))
                     {
                         //initialize a new buffer with the correct dimmensions
                         buffer = std::vector<std::vector<data_type>>(rows,std::vector<data_type>(cols,0));

@@ -273,8 +273,6 @@
                     spectrogram_handler.reset();
                     energy_detector.reset_chirp_detector();
                     flush_usrp_buffer();
-                    //energy_detector.initialize_chirp_detection_params();
-                    //mesaure_relative_noise_power();
                 }
 
                 /**

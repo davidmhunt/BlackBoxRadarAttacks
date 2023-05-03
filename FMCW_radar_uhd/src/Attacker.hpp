@@ -139,13 +139,13 @@
                     {
                         threads.emplace_back([&]() {
                             //TODO: Appears that an exception is occuring here. Appears to be occuring at the end of the function (right before the else statement)
-                            std::cout << "run_attacker: running attacking_subsystem" <<std::endl;
+                            std::cout << "Attacker::run_attacker: running attacking_subsystem" <<std::endl;
                             attacking_subsystem.run();
                         });
 
-                        std::cout << "run_attacker: running sensing_subsystem" <<std::endl;
+                        std::cout << "Attacker::run_attacker: running sensing_subsystem" <<std::endl;
                         sensing_subsystem.run(multiple_runs,run_number);
-                        std::cout << "run_attacker: sensing_subsystem_run_complete" <<std::endl;
+                        std::cout << "Attacker::run_attacker: sensing_subsystem_run_complete" <<std::endl;
                     }
                     else{
                         sensing_subsystem.run(multiple_runs,run_number);

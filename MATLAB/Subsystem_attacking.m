@@ -370,6 +370,23 @@ classdef Subsystem_attacking  < handle
             end
             obj.additional_phase_variation = desired_phase_shift_at_chirps - phase_shift_at_chirps;
         end
+
+        function scaling_val = compute_power_scaling(obj)
+            if contains(obj.attack_mode,"target")
+                if obj.desired_range_m < obj.Attacker.current_target_pos
+                    scaling_val = 1.0;
+                    return;
+                else
+                    loss_attacker = 1 / (4 * pi * obj.Attacker.current_target_pos);
+                    loss_spoofing = 1/ (4 * pi * obj.desired_range_m);
+                    scaling_val = loss_spoofing / loss_attacker;
+                    return;
+                end
+            else 
+                scaling_val = 1.0;
+                return;
+            end
+        end
     
         function compute_noisy_velocity_spoof_values(obj)
             %for normal distribution
@@ -416,17 +433,20 @@ classdef Subsystem_attacking  < handle
             time_delay = desired_time_delay - propagation_delay;
             num_samples_delay = round(time_delay * (obj.Attacker.FMCW_sample_rate_Msps * 1e6));
             
+            scaling_val = obj.compute_power_scaling();
+            
             for chirp = 1:int32(obj.chirps_to_compute)
                 %compute the phase shift
                 phase_shift = (double(chirp) - 1) * obj.phase_shift_per_chirp;
             
                 %compute the waveform
-                waveform = cos(pi * obj.FrequencySlope_MHz_us * 1e12 ...
+                waveform = scaling_val * ...
+                    (cos(pi * obj.FrequencySlope_MHz_us * 1e12 ...
                     * obj.t.^(2) + phase_shift + obj.additional_phase_variation(chirp) + ...
                     obj.additional_phase_variation_noise(chirp)) + ...
                     1i * sin(pi * obj.FrequencySlope_MHz_us * 1e12...
                     * obj.t.^(2) + phase_shift + obj.additional_phase_variation(chirp) + ...
-                    obj.additional_phase_variation_noise(chirp));
+                    obj.additional_phase_variation_noise(chirp)));
             
                 %save it in the emulated_chirps array
                 if obj.num_samples_sweep_time ~= size(waveform)

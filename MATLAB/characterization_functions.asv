@@ -1172,16 +1172,16 @@ classdef characterization_functions
                     configurations_passed = false;
                     failed_cases = failed_cases + 1;
                 else
-                    good_slopes = [good_slopes; slopes(i)];
-                    good_chirp_periods = [good_chirp_periods; chirp_periods(i)];
-                    good_adc_sampling_rates = [good_adc_sampling_rates; adc_sampling_rates(i)];
+                    good_slopes = [good_slopes,slopes(i)];
+                    good_chirp_periods = [good_chirp_periods, chirp_periods(i)];
+                    good_adc_sampling_rates = [good_adc_sampling_rates, adc_sampling_rates(i)];
                 end
             end
             
             if configurations_passed
                 fprintf("All Configurations passed \n");
             else
-                fprintf("%d configuration(s) failed \n",failed_cases);
+                fprintf("%d configuration(s) failed \n");
             end
         end
 
