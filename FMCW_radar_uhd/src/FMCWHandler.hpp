@@ -221,7 +221,7 @@ namespace FMCWHandler_namespace {
                 
                 if (multiple_runs)
                 {
-                    for (size_t i = 9; i <= num_runs; i++)
+                    for (size_t i = 1; i <= num_runs; i++)
                     {
                         run_FMCW_trial(i);
                     }
