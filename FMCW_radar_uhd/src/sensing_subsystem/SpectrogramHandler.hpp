@@ -13,6 +13,9 @@
     #include <csignal>
     #include <thread>
 
+    //to track processing times
+    #include <chrono>
+
     #define _USE_MATH_DEFINES
     #include <cmath>
     #include <algorithm>
@@ -35,6 +38,9 @@
     using json = nlohmann::json;
     using namespace Eigen;
     using CrossCorr_namespace::CrossCorr;
+
+    //Variable for tracking process times
+    using namespace std::chrono;
 
     namespace SpectrogramHandler_namespace {
 
@@ -707,12 +713,27 @@
              * 
              */
             void process_received_signal(){
+
+                //mark the start time
+                auto start = high_resolution_clock::now();
+                
+                //perform processing
                 load_and_prepare_for_fft();
                 compute_ffts();
                 detect_peaks_in_spectrogram();
                 compute_clusters();
                 compute_linear_model();
                 compute_victim_parameters();
+
+                //mark stop time
+                auto stop = high_resolution_clock::now();
+                auto duration = duration_cast<microseconds>(stop - start);
+                
+                //if debug is enabled print the time taken to compute the waveform
+                if(debug){
+                    std::cout << "SpectrogramHandler::process_received_signal: Time taken to process "   
+                    << duration.count() << " microseconds" << std::endl;
+                }
             }
 
         private: //functions to support processing the received signal are private

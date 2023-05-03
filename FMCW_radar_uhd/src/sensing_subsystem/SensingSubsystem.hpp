@@ -245,9 +245,8 @@
                     {
                         std::cout << "SensingSubsystem::run: completed frame tracking" << std::endl;
                         save_sensing_subsystem_state();
-                        spectrogram_handler.print_summary_of_estimated_parameters();
                     }
-                    
+                    spectrogram_handler.print_summary_of_estimated_parameters();
                     spectrogram_handler.save_estimated_parameters_to_file(multiple_runs,run_number);
                 }
                 
