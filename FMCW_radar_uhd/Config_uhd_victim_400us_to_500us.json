@@ -18,7 +18,7 @@
         "TX":{
             "enabled":true,
             "spb":0,
-            "gain":50,
+            "gain":70,
             "ant":"TX/RX",
             "subdev":"A:A A:B",
             "channel":1
