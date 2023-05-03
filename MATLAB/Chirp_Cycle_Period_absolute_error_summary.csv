@@ -1,2 +1,2 @@
-Mean (ns),Variance (ns)^2,MSE (ns)^2,75th Percentile (ns),Percent Failed Trials
-84.6261481007301,29046.8333877082,33974.0465309739,73.2171508904855,0
+Mean (ns),Variance (ns)^2,MSE (ns)^2,95th Percentile (ns),Percent Failed Trials
+16.9822329686261,2875.98533130937,3149.55690125243,33.7697445956565,0

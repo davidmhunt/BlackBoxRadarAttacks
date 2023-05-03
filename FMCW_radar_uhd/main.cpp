@@ -39,7 +39,7 @@ using FMCWHandler_namespace::FMCWHandler;
 int UHD_SAFE_MAIN(int argc, char* argv[]) {
 
     //radar configuration
-    std::string radar_config_file = "/home/david/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd/Config_uhd_revA.json";
+    std::string radar_config_file = "/home/david/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd/Config_uhd_UWB.json";
     //std::string radar_config_file = "/home/davidh/Documents/BlackBoxRadarAttacks/FMCW_radar_uhd/Config_uhd_100MHz.json";
     
     //attacker configuration
