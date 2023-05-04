@@ -18,7 +18,7 @@
         "TX":{
             "enabled":true,
             "spb":2040,
-            "gain":70,
+            "gain":55,
             "ant":"TX/RX",
             "subdev":"A:A A:B",
             "channel":0
@@ -31,7 +31,7 @@
             "ant":"RX2",
             "subdev":"A:A A:B",
             "channel":0,
-            "offset_us": 6.9726
+            "offset_us": 7.106
         },
         "AdditionalSettings":{
             "setup_time":1.0,
@@ -62,11 +62,11 @@
         "enabled": true,
         "num_attack_frames": 20,
         "attack_start_frame": 7,
-        "current_victim_pos_m": 40,
-        "current_victim_vel_m_s": -45,
+        "current_victim_pos_m": 0,
+        "current_victim_vel_m_s": -46,
         "FP_spoof_enable":true,
-        "FP_spoof_distances_m": [150, 200],
-        "FP_spoof_vels_m_s": [-20, -7],
+        "FP_spoof_distances_m": [150],
+        "FP_spoof_vels_m_s": [-20],
         "FN_spoof_enable": false,
         "FN_spoof_distance_m": 50,
         "FN_spoof_vel_m_s": -10,

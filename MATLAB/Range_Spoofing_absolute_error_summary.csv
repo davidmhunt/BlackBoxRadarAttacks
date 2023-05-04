@@ -1,2 +1,2 @@
-Mean (m),Variance (m)^2,MSE (m)^2,80th Percentile (m),Percent Failed Trials
-14.5409543331978,711.52040086388,922.485406850114,15.1057370865819,0
+Mean (m),Variance (m)^2,MSE (m)^2,85th Percentile (m),Percent Failed Trials
+17.11536441319,1005.70337026534,1297.96860034812,16.1007122519397,0

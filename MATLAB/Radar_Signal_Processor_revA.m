@@ -194,7 +194,7 @@ classdef Radar_Signal_Processor_revA < handle
 
             %set key parameters for the range estimator
             obj.NumEstimatesSource_rng = 'Property';
-            obj.NumEstimates_rng = 15; %previously 5
+            obj.NumEstimates_rng = 30; %previously 5
             obj.ClusterInputPort_rng = true;
 
             %initialize the range estimator
@@ -205,7 +205,7 @@ classdef Radar_Signal_Processor_revA < handle
 
             %set key parameters for the range estimator
             obj.NumEstimatesSource_dplr = 'Property';
-            obj.NumEstimates_dplr = 15; %previously 5
+            obj.NumEstimates_dplr = 30; %previously 5
             obj.ClusterInputPort_dplr = true;
 
             %initialize the range estimator

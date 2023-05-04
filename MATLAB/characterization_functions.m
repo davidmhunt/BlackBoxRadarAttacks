@@ -390,7 +390,7 @@ classdef characterization_functions
             [h,stats] = cdfplot(abs_errors);
             h.LineWidth = 2.0;
             xlabel(metric_title + " " + metric_units,"FontSize",font_size);
-            title("CDF of Absolute " + metric_title + " Error","FontSize",font_size);
+            title({"CDF of Absolute ", metric_title + " Error"},"FontSize",font_size);
             ax = gca;
             ax.FontSize = font_size;
             if max(abs_errors) > 5 * tail
