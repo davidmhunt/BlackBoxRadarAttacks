@@ -859,7 +859,7 @@
                             //receive the data
                             num_samps_received = rx_stream -> recv(
                                             &(rx_buffer->buffer[j].front()),
-                                            num_samps_per_buff,rx_md,0.5,true);
+                                            num_samps_per_buff,rx_md,1.0,true);
                             
                             //check the metadata to confirm good receive
                             if (num_samps_received != num_samps_per_buff){
