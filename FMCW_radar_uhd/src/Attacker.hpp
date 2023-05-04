@@ -163,10 +163,12 @@
                  * @brief Resets the Attacker to a fresh state (useful if performing multiple experiments).
                  * Resets the sensing subsystem and attacking subsystem
                  * 
+                 * @param multiple_runs On True, implements certain behaviors to support multiple runs. Defaults to false
+                 * @param run_number. When multiple runs are enabled, specifies the current run number
                  */
-                void reset(void){
+                void reset(bool multiple_runs = false, size_t run_number = 0){
                     sensing_subsystem.reset();
-                    attacking_subsystem.reset();
+                    attacking_subsystem.reset(multiple_runs,run_number);
                 }
         };
     }
