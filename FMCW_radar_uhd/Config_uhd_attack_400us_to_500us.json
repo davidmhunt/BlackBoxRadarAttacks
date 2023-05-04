@@ -54,8 +54,8 @@
         "max_victim_chirps_to_capture":800,
         "num_victim_frames_to_capture": 30,
         "min_frame_periodicity_ms": 400,
-        "max_waiting_time_ms": 90e3,
-        "debug": false,
+        "max_waiting_time_ms": 600e3,
+        "debug": true,
         "save_file_path": "/home/david/Documents/MATLAB_generated/cpp_sensed_parameters/"
     },
     "AttackSubsystemSettings":{

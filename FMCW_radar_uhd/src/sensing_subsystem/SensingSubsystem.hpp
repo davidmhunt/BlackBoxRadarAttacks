@@ -204,34 +204,47 @@
                         detection_start_time_us = energy_detector.get_detection_start_time_us();
                         spectrogram_handler.set_detection_start_time_us(detection_start_time_us);
                         energy_detector.save_chirp_detection_signal_to_buffer(& (spectrogram_handler.rx_buffer));
-                        spectrogram_handler.process_received_signal();
-                        energy_detector.reset_chirp_detector();
-
-                        next_rx_sense_start_time = spectrogram_handler.get_last_frame_start_time_s() * 1e-6
-                            + spectrogram_handler.min_frame_periodicity_s;
-                        
-                        //TODO: Make this more robust (case where a frame isn't actually detected)
-                        if (i > 3) //if more than 3 chirps have been sampled
+                        if (spectrogram_handler.process_received_signal())
                         {
-                            size_t chirps_to_compute = 256;
-                            attacking_subsystem -> compute_calculated_values(
-                                spectrogram_handler.get_average_chirp_duration_us(),
-                                spectrogram_handler.get_average_chirp_slope_MHz_us(),
-                                spectrogram_handler.get_average_frame_duration_ms(),
-                                chirps_to_compute
-                            );
-                            spectrogram_handler.load_computed_victim_chirp(attacking_subsystem -> victim_waveform.buffer);
-                        }
-                        
-                        
+                            energy_detector.reset_chirp_detector();
 
-                        //send to attacker if enabled
-                        if ((attacking_subsystem -> enabled) && (i > attacking_subsystem -> attack_start_frame))
-                        {   
-                            spectrogram_handler.set_attack_in_progress(true);
-                            double next_frame_start_time = spectrogram_handler.get_next_frame_start_time_prediction_ms();
-                            attacking_subsystem -> load_new_frame_start_time(next_frame_start_time);
+                            next_rx_sense_start_time = spectrogram_handler.get_last_frame_start_time_s() * 1e-6
+                                + spectrogram_handler.min_frame_periodicity_s;
+                            
+                            //TODO: Make this more robust (case where a frame isn't actually detected)
+                            if (i > 3) //if more than 3 chirps have been sampled
+                            {
+                                size_t chirps_to_compute = 256;
+                                attacking_subsystem -> compute_calculated_values(
+                                    spectrogram_handler.get_average_chirp_duration_us(),
+                                    spectrogram_handler.get_average_chirp_slope_MHz_us(),
+                                    spectrogram_handler.get_average_frame_duration_ms(),
+                                    chirps_to_compute
+                                );
+                                spectrogram_handler.load_computed_victim_chirp(attacking_subsystem -> victim_waveform.buffer);
+                            }
+                            
+                            
+
+                            //send to attacker if enabled
+                            if ((attacking_subsystem -> enabled) && (i > attacking_subsystem -> attack_start_frame))
+                            {   
+                                spectrogram_handler.set_attack_in_progress(true);
+                                double next_frame_start_time = spectrogram_handler.get_next_frame_start_time_prediction_ms();
+                                attacking_subsystem -> load_new_frame_start_time(next_frame_start_time);
+                            }
                         }
+                        else{
+                            energy_detector.reset_chirp_detector();
+
+                            next_rx_sense_start_time = 
+                                detection_start_time_us * 1e-6
+                                + 0.05;
+                            
+                            i--;
+                        }
+                        
+                        
                     }
 
                     //tell attacking subsystem that sensing is not longer being performed

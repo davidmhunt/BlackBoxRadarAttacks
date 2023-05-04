@@ -13,7 +13,7 @@
             "wirefmt":"sc16",
             "type":"float",
             "cpufmt":"fc32",
-            "stream_start_time":0.25
+            "stream_start_time":0.5
         },
         "TX":{
             "enabled":true,
@@ -45,7 +45,7 @@
         "tx_file_folder_path":"/home/david/Documents/MATLAB_generated/MATLAB_full_chirps/",
         "rx_file_folder_path":"/home/david/Documents/MATLAB_generated/cpp_rx_data_files/",
         "num_chirps": 256,
-        "num_frames": 40,
+        "num_frames": 50,
         "frame_periodicity_ms": 500,
         "debug":false
     }

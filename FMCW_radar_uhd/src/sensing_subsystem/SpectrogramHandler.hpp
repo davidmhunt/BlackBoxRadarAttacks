@@ -712,7 +712,7 @@
              * @brief Process the received signal
              * 
              */
-            void process_received_signal(){
+            bool process_received_signal(){
 
                 //mark the start time
                 auto start = high_resolution_clock::now();
@@ -722,18 +722,30 @@
                 compute_ffts();
                 detect_peaks_in_spectrogram();
                 compute_clusters();
-                compute_linear_model();
-                compute_victim_parameters();
 
-                //mark stop time
-                auto stop = high_resolution_clock::now();
-                auto duration = duration_cast<microseconds>(stop - start);
-                
-                //if debug is enabled print the time taken to compute the waveform
-                if(debug){
-                    std::cout << "SpectrogramHandler::process_received_signal: Time taken to process "   
-                    << duration.count() << " microseconds" << std::endl;
+                if (max_cluster_index > 0)
+                {
+                    compute_linear_model();
+                    compute_victim_parameters();
+
+                    //mark stop time
+                    auto stop = high_resolution_clock::now();
+                    auto duration = duration_cast<microseconds>(stop - start);
+                    
+                    //if debug is enabled print the time taken to compute the waveform
+                    if(debug){
+                        std::cout << "SpectrogramHandler::process_received_signal: Time taken to process "   
+                        << duration.count() << " microseconds" << std::endl;
+                    }
+
+                    return true;
                 }
+                else{
+                    std::cout << "SpectrogramHandler::process_received_signal: no chirps detected" << std::endl;
+                    return false;
+                }
+                
+                
             }
 
         private: //functions to support processing the received signal are private
