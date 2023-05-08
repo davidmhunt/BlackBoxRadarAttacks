@@ -217,15 +217,15 @@ classdef Radar_Signal_Processor_revA < handle
         
         function configure_CFAR_detector(obj)
             %set PFAR to be 1e-8 for now
-            obj.PFAR = 1e-8;
+            obj.PFAR = 1e-5;
             
             %calculate training region size
             %previously used .05 * num samples and num chirps
-            range_training_size = min(5,ceil(obj.Radar.ADC_Samples * 0.05)); %use 8,0.05 for higher BW
-            velocity_training_size = max(2,ceil(obj.Radar.NumChirps * 0.005)); % use 3,0.05 for higher BW
+            range_training_size = min(2,ceil(obj.Radar.ADC_Samples * 0.05)); %use 8,0.05 for higher BW
+            velocity_training_size = max(6,ceil(obj.Radar.NumChirps * 0.0005)); % use 3,0.05 for higher BW
             
             %put guard and training region sizes into arrays for the CFAR detector
-            obj.guard_region = [2,1]; %previously [2,1]
+            obj.guard_region = [3,3]; %previously [2,1]
             obj.training_region = [range_training_size,velocity_training_size];
             
             %compute the max and min indicies for the cells under test
@@ -272,7 +272,7 @@ classdef Radar_Signal_Processor_revA < handle
         %}
 
             obj.Epsilon = 3; %previously 2
-            obj.minpts = 5; %was previously 3
+            obj.minpts = 2; %was previously 3
         end       
         
         function reset_radar_cube(obj)
@@ -377,6 +377,13 @@ classdef Radar_Signal_Processor_revA < handle
             detected_velocities = dopgrid(detections(2,:));
             detected_ranges = rnggrid(detections(1,:));
             
+            %filtering out non-zero velocity components
+            %identify non-zero velocity objects
+            valid_idxs = abs(detected_velocities) > 2;
+            detected_velocities = detected_velocities(valid_idxs);
+            detected_ranges = detected_ranges(valid_idxs);
+            detections = detections(:,valid_idxs);
+            
             
         
             %estimate the range and the velocities
@@ -396,7 +403,7 @@ classdef Radar_Signal_Processor_revA < handle
                     
                     %zoom the range doppler plot
                 
-                    clim([resp_max-30, resp_max]);
+                    clim([resp_max-40, resp_max]); %previously resp_max - 30
                     xlim([max(obj.tgt_velocity - obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
                         -1 * obj.Radar.V_Max_m_per_s), ...
                         min(obj.tgt_velocity + obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
