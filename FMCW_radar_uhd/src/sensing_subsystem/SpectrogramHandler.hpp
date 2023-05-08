@@ -1349,7 +1349,7 @@
 
                 //save the results to a file
                 std::string file_name;
-                if (file_num > 0){
+                if (number_results_file && file_num > 0){
                     file_name = "cpp_estimated_parameters_" + std::to_string(file_num) + ".bin";
                 }else{
                     file_name = "cpp_estimated_parameters.bin";

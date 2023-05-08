@@ -746,6 +746,12 @@ classdef Simulator_revB < handle
             fclose(fileID);
         end
 
+        function save_data_to_file(obj,data_to_save,path,dtype)
+            fileID = fopen(path,'w');
+            fwrite(fileID,data_to_save, dtype);
+            fclose(fileID);
+        end
+
         function read_data = read_from_file(obj,path, complex_data, dtype)
             fileID = fopen(path,'r');
             read_data = fread(fileID,dtype);

@@ -361,14 +361,28 @@
                  * 
                  * @param run_number (default 0) when multiple runs is true, loads the tx chirp file
                  * corresponding to that number of run
+                 * 
+                 * @param evaluate_spoofing_enabled (default false) when multiple runs is true, saves a separate rx buffer for each trial to support spoofing evaluation
+                 * 
+                 * @param evaluate_parameter_estimation_enabled (default false) when multiple runs is enabled, loads a separate tx buffer for each trial to support evaluation of parameter estimation
                  */
                 void init_buffers_for_radar(bool multiple_runs = false,
-                    size_t run_number = 0){
+                    size_t run_number = 0, 
+                    bool evaluate_spoofing_enabled = false, 
+                    bool evaluate_parameter_estimation_enabled = false){
                     
                     size_t num_chirps = config["RadarSettings"]["num_chirps"].get<size_t>();
                     
-                    init_tx_buffer(num_chirps,0,multiple_runs,run_number);
-                    init_rx_buffer(num_chirps,0,multiple_runs,run_number);
+                    if (multiple_runs)
+                    {
+                        init_tx_buffer(num_chirps,0,evaluate_parameter_estimation_enabled,run_number);
+                        init_rx_buffer(num_chirps,0,evaluate_spoofing_enabled,run_number);
+                    }
+                    else
+                    {
+                        init_tx_buffer(num_chirps,0,false,run_number);
+                        init_rx_buffer(num_chirps,0,false,run_number);
+                    }
                 }          
                 
 
@@ -415,11 +429,17 @@
                  * 
                  * @param run_number (default 0) when multiple runs is true, loads the tx chirp file
                  * corresponding to that number of run
+                 * 
+                 * @param evaluate_spoofing_enabled (default false) when multiple runs is true, saves a separate rx buffer for each trial to support spoofing evaluation
+                 * 
+                 * @param evaluate_parameter_estimation_enabled (default false) when multiple runs is enabled, loads a separate tx buffer for each trial to support evaluation of parameter estimation
                  */
                 void initialize_radar(bool multiple_runs = false,
-                size_t run_number = 0){
+                size_t run_number = 0,
+                bool evaluate_spoofing_enabled = false, 
+                bool evaluate_parameter_estimation_enabled = false){
                     //initialize the buffers
-                    init_buffers_for_radar(multiple_runs,run_number);
+                    init_buffers_for_radar(multiple_runs,run_number,evaluate_spoofing_enabled,evaluate_parameter_estimation_enabled);
 
                     //compute the frame start times
                     init_frame_start_times();

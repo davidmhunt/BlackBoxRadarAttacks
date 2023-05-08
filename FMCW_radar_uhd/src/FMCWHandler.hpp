@@ -38,6 +38,8 @@ namespace FMCWHandler_namespace {
 
             //to support multiple runs
             bool multiple_runs;
+            bool evaluate_spoofing_enabled;
+            bool evaluate_parameter_estimation_enabled;
             std::string victim_tx_files_folder_path;
             size_t num_runs;
 
@@ -78,24 +80,37 @@ namespace FMCWHandler_namespace {
              */
             bool check_config(){
                 bool config_good = true;
-                //check sampling rate
+                //attacker enabled
                 if(fmcw_config["Attacker_enabled"].is_null()){
                     std::cerr << "FMCWHandler::check_config: Attacker_enabled not in JSON" <<std::endl;
                     config_good = false;
                 }
 
+                //Radar enabled
                 if(fmcw_config["Radar_enabled"].is_null()){
                     std::cerr << "FMCWHandler::check_config: Radar_enabled not in JSON" <<std::endl;
                     config_good = false;
                 }
 
+                //performing multiple runs
                 if(fmcw_config["multiple_runs"]["perform_multiple_runs"].is_null()){
                     std::cerr << "FMCWHandler::check_config: perform_multiple_runs not in JSON" <<std::endl;
                     config_good = false;
                 }else if (fmcw_config["multiple_runs"]["perform_multiple_runs"].get<bool>())
                 {
+                    //the number of runs to perform
                     if(fmcw_config["multiple_runs"]["num_runs"].is_null()){
                         std::cerr << "FMCWHandler::check_config: num_runs not in JSON" <<std::endl;
+                        config_good = false;
+                    }
+                    //the number of runs to perform
+                    if(fmcw_config["multiple_runs"]["evaluate_spoofing"].is_null()){
+                        std::cerr << "FMCWHandler::check_config: evaluate_spoofing not in JSON" <<std::endl;
+                        config_good = false;
+                    }
+                    //the number of runs to perform
+                    if(fmcw_config["multiple_runs"]["evaluate_parameter_estimation"].is_null()){
+                        std::cerr << "FMCWHandler::check_config: evaluate_parameter_estimation not in JSON" <<std::endl;
                         config_good = false;
                     }
                 }
@@ -121,6 +136,8 @@ namespace FMCWHandler_namespace {
                 if(multiple_runs)
                 {
                     num_runs = fmcw_config["multiple_runs"]["num_runs"].get<size_t>();
+                    evaluate_spoofing_enabled = fmcw_config["multiple_runs"]["evaluate_spoofing"].get<bool>();
+                    evaluate_parameter_estimation_enabled = fmcw_config["multiple_runs"]["evaluate_parameter_estimation"].get<bool>();
                 }
             }
 
@@ -168,8 +185,8 @@ namespace FMCWHandler_namespace {
                 if (attack_enabled && victim_enabled)
                     {
                         //initialize victim and attacker
-                        Victim.initialize_radar(multiple_runs,run_number);
-                        Attacker.reset();
+                        Victim.initialize_radar(multiple_runs,run_number,evaluate_spoofing_enabled,evaluate_parameter_estimation_enabled);
+                        Attacker.reset(multiple_runs ? evaluate_spoofing_enabled : false,run_number);
 
                         //create victim thread
                         std::thread victim_thread([&]() {
@@ -177,23 +194,24 @@ namespace FMCWHandler_namespace {
                         });
 
                         //run the attacker
-                        Attacker.run_attacker(multiple_runs,run_number);
+                        Attacker.run_attacker(multiple_runs ? evaluate_parameter_estimation_enabled : false,run_number);
                         
                         //wait for victim thread to finish
                         victim_thread.join();
                     }
                 else if (attack_enabled)
                 {
-                    //initialize victim and attacker
-                    Attacker.reset();
+                    //initialize attacker
+                    Attacker.reset(multiple_runs ? evaluate_spoofing_enabled : false,run_number);
+
 
                     //run the attacker
-                    Attacker.run_attacker(multiple_runs,run_number);
+                    Attacker.run_attacker(multiple_runs ? evaluate_parameter_estimation_enabled : false,run_number);
                 }
                 else if (victim_enabled)
                 {
-                    //initialize victim and attacker
-                    Victim.initialize_radar(multiple_runs,run_number);
+                    //initialize victim
+                    Victim.initialize_radar(multiple_runs,run_number,evaluate_spoofing_enabled,evaluate_parameter_estimation_enabled);
 
                     //run the victim
                     Victim.run_RADAR();

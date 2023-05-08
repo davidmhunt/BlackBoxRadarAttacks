@@ -419,6 +419,18 @@
                         config_good = false;
                     }
 
+                    //velocity_spoof_path
+                    if(config["multiple_runs"]["velocity_spoof_path"].is_null()){
+                        std::cerr << "AttackSubsystem::check_config: no velocity_spoof_path in JSON" <<std::endl;
+                        config_good = false;
+                    }
+
+                    //range_spoof_path
+                    if(config["multiple_runs"]["range_spoof_path"].is_null()){
+                        std::cerr << "AttackSubsystem::check_config: no range_spoof_path in JSON" <<std::endl;
+                        config_good = false;
+                    }
+
                     return config_good;
                 }
 
@@ -487,26 +499,99 @@
                     victim_parameters_loaded = false;
                 }
             
-                void init_spoofing_parameters(void){
+                /**
+                 * @brief Initializes the spoofing parameters including the victim pos/vel, FN spoofing status, and FP spoofing status
+                 * 
+                 * @param multiple_runs On True, loads spoofing ranges/velocities from a file instead of from the JSON (for multiple run support). On False, loads ranges/velocities from the JSON. Defaults to false.
+                 * @param run_number When multiple runs are enabled, the run number of the current trial
+                 */
+                void init_spoofing_parameters(bool multiple_runs = false, size_t run_number = 0){
                     
                     //set the victim position
                     double victim_pos_m = config["AttackSubsystemSettings"]["current_victim_pos_m"].get<double>();
                     double victim_vel_m_s =  config["AttackSubsystemSettings"]["current_victim_vel_m_s"].get<double>();
                     set_victim_pos_vel(victim_pos_m,victim_vel_m_s);
 
-                    //configure FN spoofing
-                    FN_spoof_enable = config["AttackSubsystemSettings"]["FN_spoof_enable"].get<bool>();
-                    sim_vel_attack_enable = config["AttackSubsystemSettings"]["sim_vel_attack_enable"].get<bool>();
-                    sim_slope_attack_enable = config["AttackSubsystemSettings"]["sim_slope_attack_enable"].get<bool>();
-                    double FN_spoof_pos_m = config["AttackSubsystemSettings"]["FN_spoof_distance_m"].get<double>();
-                    double FN_spoof_vel_m_s = config["AttackSubsystemSettings"]["FN_spoof_vel_m_s"].get<double>();
-                    set_FN_spoof_pos_vel(FN_spoof_pos_m,FN_spoof_vel_m_s);
+                    if(multiple_runs)
+                    {
+                        //load the spoofing values from a file instead
+                        std::vector<double> spoof_velocities_m_s = get_velocity_spoofs_from_file(run_number);
+                        std::vector<double> spoof_ranges_m = get_range_spoofs_from_file(run_number);
 
-                    //configure Fp spoofing
-                    FP_spoof_enable = config["AttackSubsystemSettings"]["FP_spoof_enable"].get<bool>();
-                    std::vector<double> FP_spoof_pos_m = config["AttackSubsystemSettings"]["FP_spoof_distances_m"].get<std::vector<double>>();
-                    std::vector<double> FP_spoof_vel_m_s = config["AttackSubsystemSettings"]["FP_spoof_vels_m_s"].get<std::vector<double>>();
-                    set_FP_spoof_pos_vel(FP_spoof_pos_m,FP_spoof_vel_m_s);
+                        //configure FN spoofing
+                        FN_spoof_enable = config["AttackSubsystemSettings"]["FN_spoof_enable"].get<bool>();
+                        sim_vel_attack_enable = config["AttackSubsystemSettings"]["sim_vel_attack_enable"].get<bool>();
+                        sim_slope_attack_enable = config["AttackSubsystemSettings"]["sim_slope_attack_enable"].get<bool>();
+                        set_FN_spoof_pos_vel(spoof_ranges_m[0],spoof_velocities_m_s[0]);
+
+                        //configure Fp spoofing
+                        FP_spoof_enable = config["AttackSubsystemSettings"]["FP_spoof_enable"].get<bool>();
+                        set_FP_spoof_pos_vel(spoof_ranges_m,spoof_velocities_m_s);
+                    }
+                    else
+                    {
+                        //configure FN spoofing
+                        FN_spoof_enable = config["AttackSubsystemSettings"]["FN_spoof_enable"].get<bool>();
+                        sim_vel_attack_enable = config["AttackSubsystemSettings"]["sim_vel_attack_enable"].get<bool>();
+                        sim_slope_attack_enable = config["AttackSubsystemSettings"]["sim_slope_attack_enable"].get<bool>();
+                        double FN_spoof_pos_m = config["AttackSubsystemSettings"]["FN_spoof_distance_m"].get<double>();
+                        double FN_spoof_vel_m_s = config["AttackSubsystemSettings"]["FN_spoof_vel_m_s"].get<double>();
+                        set_FN_spoof_pos_vel(FN_spoof_pos_m,FN_spoof_vel_m_s);
+
+                        //configure Fp spoofing
+                        FP_spoof_enable = config["AttackSubsystemSettings"]["FP_spoof_enable"].get<bool>();
+                        std::vector<double> FP_spoof_pos_m = config["AttackSubsystemSettings"]["FP_spoof_distances_m"].get<std::vector<double>>();
+                        std::vector<double> FP_spoof_vel_m_s = config["AttackSubsystemSettings"]["FP_spoof_vels_m_s"].get<std::vector<double>>();
+                        set_FP_spoof_pos_vel(FP_spoof_pos_m,FP_spoof_vel_m_s);
+                    }
+                }
+
+                /**
+                 * @brief Get the velocity spoofs from from a file when performing multiple runs
+                 * 
+                 * @param run_number 
+                 * @return std::vector<double> 
+                 */
+                std::vector<double> get_velocity_spoofs_from_file(size_t run_number){
+
+                    //initialize a buffer to store the desired velocity spoofs
+                    Buffer_1D<double> velocity_spoofs_buffer(false);
+
+                    //set the file path
+                    std::string velocity_spoof_path = config["multiple_runs"]["velocity_spoof_path"].get<std::string>();
+
+                    //determine the file name
+                    std::string file_name = "MATLAB_desired_velocity_spoofs_" + std::to_string(run_number) + ".bin";
+
+                    //set the read file and import it
+                    velocity_spoofs_buffer.set_read_file(velocity_spoof_path + file_name,true);
+                    velocity_spoofs_buffer.import_from_file();
+
+                    return velocity_spoofs_buffer.buffer;
+                }
+
+                /**
+                 * @brief Get the range spoofs from from a file when performing multiple runs
+                 * 
+                 * @param run_number 
+                 * @return std::vector<double> 
+                 */
+                std::vector<double> get_range_spoofs_from_file(size_t run_number){
+
+                    //initialize a buffer to store the desired velocity spoofs
+                    Buffer_1D<double> range_spoofs_buffer(false);
+
+                    //set the file path
+                    std::string range_spoof_path = config["multiple_runs"]["range_spoof_path"].get<std::string>();
+
+                    //determine the file name
+                    std::string file_name = "MATLAB_desired_range_spoofs_" + std::to_string(run_number) + ".bin";
+
+                    //set the read file and import it
+                    range_spoofs_buffer.set_read_file(range_spoof_path + file_name,true);
+                    range_spoofs_buffer.import_from_file();
+
+                    return range_spoofs_buffer.buffer;
                 }
 
                 void init_debug(void){
@@ -698,8 +783,10 @@
                 /**
                  * @brief Resets the attacking subsystem (useful if performing multiple runs)
                  * 
+                 * @param multiple_runs On True spoofing parameters will be initialized for multiple runs. Defaults to False
+                 * @param run_number If multiple runs is true, run_number denotes the current run
                  */
-                void reset(){
+                void reset(bool multiple_runs = false, size_t run_number = 0){
                     //TODO: fix this function
                     init_attack_subsystem_parameters();
                     init_estimated_parameter_values();
@@ -708,7 +795,7 @@
                         init_frame_start_times_buffer();
                         
                     }
-                    init_spoofing_parameters();
+                    init_spoofing_parameters(multiple_runs,run_number);
                 }
 
                 /**
