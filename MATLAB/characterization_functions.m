@@ -1847,9 +1847,14 @@ classdef characterization_functions
                 ranges = ranges(~isnan(ranges));
                 velocities = velocities(~isnan(ranges));
                 
-                [idx, ~] = dsearchn([ranges , velocities], point);
-                closest_ranges(i) = range_detections(i,idx);
-                closest_velocities(i) = velocity_detections(i,idx);
+                if ~isempty(ranges)
+                    [idx, ~] = dsearchn([ranges , velocities], point);
+                    closest_ranges(i) = range_detections(i,idx);
+                    closest_velocities(i) = velocity_detections(i,idx);
+                else
+                    closest_ranges(i) = 0;
+                    closest_velocities(i) = 0;
+                end
             end
             
             nearest_points = [closest_ranges, closest_velocities];

@@ -1073,6 +1073,12 @@
 
             //status variable to track if the parameter estimation buffer is full
             bool buffer_full;
+
+            //parameters to detect randomization
+            data_type randomization_threshold;
+            size_t randomization_num_samples;
+            bool randomization_detected;
+            bool randomization_detection_configured;
         public:
 
             /**
@@ -1084,7 +1090,11 @@
                 num_estimates(0),
                 mean(0),
                 variance(0),
-                buffer_full(false)
+                buffer_full(false),
+                randomization_threshold(0.0),
+                randomization_num_samples(0),
+                randomization_detected(false),
+                randomization_detection_configured(false)
                 {}
             
             /**
@@ -1098,7 +1108,11 @@
                 num_estimates(0),
                 mean(0),
                 variance(0),
-                buffer_full(0)
+                buffer_full(0),
+                randomization_threshold(0.0),
+                randomization_num_samples(0),
+                randomization_detected(false),
+                randomization_detection_configured(false)
                 {}
 
             
@@ -1112,7 +1126,11 @@
                 num_estimates(rhs.num_estimates),
                 mean(rhs.mean),
                 variance(rhs.variance),
-                buffer_full(rhs.buffer_full)
+                buffer_full(rhs.buffer_full),
+                randomization_threshold(rhs.randomization_threshold),
+                randomization_num_samples(rhs.randomization_num_samples),
+                randomization_detected(rhs.randomization_detected),
+                randomization_detection_configured(rhs.randomization_detection_configured)
                 {}
 
             /**
@@ -1128,6 +1146,10 @@
                     mean = rhs.mean;
                     variance = rhs.variance;
                     buffer_full = rhs.buffer_full;
+                    randomization_threshold = randomization_threshold;
+                    randomization_num_samples = randomization_num_samples;
+                    randomization_detected = randomization_detected;
+                    randomization_detection_configured = randomization_detection_configured;
                 }
 
                 return * this;
@@ -1157,6 +1179,10 @@
                 mean = 0;
                 variance = 0;
                 buffer_full = 0;
+                randomization_threshold = 0.0;
+                randomization_num_samples = 0;
+                randomization_detected = false;
+                randomization_detection_configured = false;
             }
 
             /**
@@ -1388,6 +1414,20 @@
             }
 
             /**
+             * @brief Configure parameter randomization detection
+             * 
+             * @param threshold the threshold to use when detecting randomization
+             * @param num_samples the number of samples to use when computing the variance for detecting parameter randomization
+             */
+            void configure_randomization_detection(data_type threshold, size_t num_samples)
+            {
+                randomization_threshold = threshold;
+                randomization_num_samples = num_samples;
+                randomization_detection_configured = true;
+                randomization_detected = false;
+            }
+            
+            /**
              * @brief Get the mean
              * 
              * @return mean 
@@ -1424,6 +1464,21 @@
                 return buffer_full;
             }
 
+            /**
+             * @brief Get the randomization detected status
+             * 
+             * @return true parameter randomization detected
+             * @return false parameter randomization not detected
+             */
+            bool get_randomization_detected(){
+                if(randomization_detection_configured){
+                    return randomization_detected;
+                }else{
+                    std::cerr << "Parameter_Estimation_Buffer::get_randomization_detected: randomization detection not yet enabled" << std::endl;
+                    return false;
+                }
+            }
+
         private: //helper functions for computing statistics
 
             /**
@@ -1436,6 +1491,11 @@
 
                 //update the variance
                 compute_variance();
+
+                //check for randomization
+                if(randomization_detection_configured){
+                    check_for_randomization();
+                }
             }
             
             /**
@@ -1451,12 +1511,49 @@
                 mean = sum / static_cast<data_type>(num_estimates);
             }
 
+            /**
+             * @brief Compute the sample variance
+             * 
+             */
             void compute_variance(){
                 data_type sum = 0;
                 for (size_t i = 0; i < num_estimates; i++){
                     sum += std::pow((Buffer_1D<data_type>::buffer[i] - mean),2);
                 }
                 variance = sum / static_cast<data_type>(num_estimates);
+            }
+
+            /**
+             * @brief If parameter randomization is configured, checks to see if parameter randomization is being employed
+             * 
+             */
+            void check_for_randomization(){
+                //ensure that randomization detection has been configured
+                if(randomization_detection_configured){
+                    //make sure that there are enough samples in the buffer
+                    if (num_estimates >= randomization_num_samples)
+                    {
+                        //compute the variance of the specified number of samples
+                        data_type sum = 0;
+                        for (size_t i = 0; i < randomization_num_samples; i++){
+                            sum += std::pow((Buffer_1D<data_type>::buffer[i] - mean),2);
+                        }
+                        data_type estimated_variance = sum / static_cast<data_type>(num_estimates);
+
+                        //compare against the threshold
+                        if(estimated_variance > randomization_threshold){
+                            randomization_detected = true;
+                        }else{
+                            randomization_detected = false;
+                        }
+                    }else{
+                        randomization_detected = false;
+                    }
+                    
+                }else{
+                    std::cerr << "Parameter_Estimation_Buffer::check_for_randomization: randomization detection not yet enabled" << std::endl;
+                    randomization_detected = false;
+                }
             }
 
         }; //end of Parameter_Estimation_Buffer class

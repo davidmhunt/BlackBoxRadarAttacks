@@ -47,6 +47,10 @@
         "num_chirps": 256,
         "num_frames": 50,
         "frame_periodicity_ms": 500,
+        "parameter_randomization":{
+            "enabled":true,
+            "frame_periodicity_3_sigma_us": 1
+        },
         "debug":false
     }
 }
