@@ -52,7 +52,7 @@
         "precise_timing_estimate_observation_window_time_us": 10,
         "precise_timing_estimate_max_xcorr_lag_samples": 400,
         "max_victim_chirps_to_capture":800,
-        "num_victim_frames_to_capture": 8,
+        "num_victim_frames_to_capture": 30,
         "min_frame_periodicity_ms": 400,
         "max_waiting_time_ms": 600e3,
         "randomization_detection":{
@@ -65,7 +65,7 @@
         "save_file_path": "/home/david/Documents/MATLAB_generated/cpp_sensed_parameters/"
     },
     "AttackSubsystemSettings":{
-        "enabled": false,
+        "enabled": true,
         "num_attack_frames": 20,
         "attack_start_frame": 7,
         "current_victim_pos_m": 20,

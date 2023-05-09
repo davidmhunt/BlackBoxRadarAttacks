@@ -7,6 +7,7 @@
     #include <string>
     #include <complex>
     #include <csignal>
+    #include <random>
 
     //JSON class
     #include <nlohmann/json.hpp>
@@ -41,13 +42,20 @@
                 //Variables to keep track of frame start times
                 
                 //timing arguments
-                double stream_start_time;
+                double stream_start_time_s;
                 std::vector<uhd::time_spec_t> frame_start_times;
                 
                 //FMCW arguments
                 size_t num_frames;
-                double frame_periodicity;
+                double frame_periodicity_s;
 
+                //parameter randomization arguments
+                bool randomization_enabled;
+                std::random_device randomization_device;
+                std::mt19937 randomization_generator;
+                std::normal_distribution<double> randomization_distribution;
+
+                
                 //status flags
                 bool radar_initialized;
                 bool debug;
@@ -94,10 +102,14 @@
                                             tx_buffer(rhs.tx_buffer),
                                             rx_buffer(rhs.rx_buffer),
                                             samples_per_chirp(rhs.samples_per_chirp),
-                                            stream_start_time(rhs.stream_start_time),
+                                            stream_start_time_s(rhs.stream_start_time_s),
                                             frame_start_times(rhs.frame_start_times),
                                             num_frames(rhs.num_frames),
-                                            frame_periodicity(rhs.frame_periodicity),
+                                            frame_periodicity_s(rhs.frame_periodicity_s),
+                                            randomization_enabled(rhs.randomization_enabled),
+                                            randomization_device(rhs.randomization_device),
+                                            randomization_generator(rhs.randomization_generator),
+                                            randomization_distribution(rhs.randomization_distribution),
                                             radar_initialized(rhs.radar_initialized),
                                             debug(rhs.debug)
                                             {}
@@ -116,10 +128,14 @@
                         tx_buffer = rhs.tx_buffer;
                         rx_buffer = rhs.rx_buffer;
                         samples_per_chirp = rhs.samples_per_chirp;
-                        stream_start_time = rhs.stream_start_time;
+                        stream_start_time_s = rhs.stream_start_time_s;
                         frame_start_times = rhs.frame_start_times;
                         num_frames = rhs.num_frames;
-                        frame_periodicity = rhs.frame_periodicity;
+                        frame_periodicity_s = rhs.frame_periodicity_s;
+                        randomization_enabled = rhs.randomization_enabled;
+                        //randomization device doesn't copy
+                        randomization_generator = rhs.randomization_generator;
+                        randomization_distribution = rhs.randomization_distribution;
                         radar_initialized = rhs.radar_initialized;
                         debug = rhs.debug;
                     }
@@ -150,6 +166,7 @@
                     else
                     {
                         init_debug_status();
+                        init_randomization();
                     }
                 }
 
@@ -202,6 +219,18 @@
                         std::cerr << "RADAR::check_config debug not specified in JSON";
                         config_good = false;
                     }
+
+                    //check for parameter randomization enabled
+                    if (config["RadarSettings"]["parameter_randomization"]["enabled"].is_null()){
+                        std::cerr << "RADAR::check_config parameter_randomization enabled not specified in JSON";
+                        config_good = false;
+                    }
+
+                    //check for parameter randomization enabled
+                    if (config["RadarSettings"]["parameter_randomization"]["frame_periodicity_3_sigma_us"].is_null()){
+                        std::cerr << "RADAR::check_config parameter_randomization frame_periodicity_3_sigma_us not specified in JSON";
+                        config_good = false;
+                    }
                     
                     return config_good;
                 }
@@ -248,6 +277,25 @@
                     samples_per_chirp = tx_chirp_buffer.num_samples;
 
                     return tx_chirp_buffer.buffer;
+                }
+
+                void init_randomization(void){
+
+                    //get randomization enabled status
+                    randomization_enabled = config["RadarSettings"]["parameter_randomization"]["enabled"].get<bool>();
+                    
+                    if(randomization_enabled){
+                        //get the 3 sigma value in us
+                        double frame_periodicity_3_sigma_us = config["RadarSettings"]["parameter_randomization"]["frame_periodicity_3_sigma_us"].get<double>();
+
+                        //determine variance
+                        double stdev = frame_periodicity_3_sigma_us / 3;
+
+                        //initialize the random device
+                        randomization_generator = std::mt19937(randomization_device());
+                        randomization_distribution = std::normal_distribution<double>(0,stdev);
+
+                    }
                 }
 
                 /**
@@ -393,14 +441,14 @@
                 void init_frame_start_times(void){
                     
                     //set stream start time
-                    stream_start_time = config["USRPSettings"]["Multi-USRP"]["stream_start_time"].get<double>();
+                    stream_start_time_s = config["USRPSettings"]["Multi-USRP"]["stream_start_time"].get<double>();
                     
 
                     //set num_frames
                     num_frames = config["RadarSettings"]["num_frames"].get<size_t>();
 
                     //set frame_periodicity
-                    frame_periodicity = config["RadarSettings"]["frame_periodicity_ms"].get<double>() * 1e-3;
+                    frame_periodicity_s = config["RadarSettings"]["frame_periodicity_ms"].get<double>() * 1e-3;
 
                     //initialize the frame start times vector
                     frame_start_times = std::vector<uhd::time_spec_t>(num_frames);
@@ -410,8 +458,11 @@
                     }
                     for (size_t i = 0; i < num_frames; i++)
                     {
-                        frame_start_times[i] = uhd::time_spec_t(stream_start_time + 
-                                        (frame_periodicity * static_cast<double>(i)));
+                        frame_start_times[i] = uhd::time_spec_t(
+                                        stream_start_time_s + 
+                                        compute_additional_randomization_s() +
+                                        (frame_periodicity_s * static_cast<double>(i))
+                                    );
                         
                         if(debug){
                             std::cout << frame_start_times[i].get_real_secs() << ", ";
@@ -419,6 +470,20 @@
                     }
                     std::cout << std::endl;
                     
+                }
+
+                /**
+                 * @brief Compute additional frame start time randomization to subtly perturb the frame start times
+                 * 
+                 * @return double a slight randomization perturbation in s
+                 */
+                double compute_additional_randomization_s(){
+                    if(randomization_enabled){
+                        double additional_randomization_us = randomization_distribution(randomization_generator);
+                        return  additional_randomization_us * 1e-6;
+                    }else{
+                        return 0.0;
+                    }
                 }
 
                 /**
@@ -438,6 +503,7 @@
                 size_t run_number = 0,
                 bool evaluate_spoofing_enabled = false, 
                 bool evaluate_parameter_estimation_enabled = false){
+                    
                     //initialize the buffers
                     init_buffers_for_radar(multiple_runs,run_number,evaluate_spoofing_enabled,evaluate_parameter_estimation_enabled);
 

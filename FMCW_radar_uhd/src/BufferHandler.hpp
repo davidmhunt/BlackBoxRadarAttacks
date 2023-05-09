@@ -1146,10 +1146,10 @@
                     mean = rhs.mean;
                     variance = rhs.variance;
                     buffer_full = rhs.buffer_full;
-                    randomization_threshold = randomization_threshold;
-                    randomization_num_samples = randomization_num_samples;
-                    randomization_detected = randomization_detected;
-                    randomization_detection_configured = randomization_detection_configured;
+                    randomization_threshold = rhs.randomization_threshold;
+                    randomization_num_samples = rhs.randomization_num_samples;
+                    randomization_detected = rhs.randomization_detected;
+                    randomization_detection_configured = rhs.randomization_detection_configured;
                 }
 
                 return * this;
