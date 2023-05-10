@@ -109,10 +109,13 @@
                 double current_victim_pos_m;
                 double current_victim_vel_m_s;
 
+                //status to enable/disable realistic movement of spoofing attacks
+                
+
                 //variables to control false negative attacks
-                //TODO: add functionality to support these variables
                 double current_FN_spoofing_pos_m;
                 double current_FN_spoofing_vel_m_s;
+                bool FN_spoof_realistic_movement_enabled;
                 bool FN_spoof_enable;
                 bool sim_vel_attack_enable;
                 bool sim_slope_attack_enable;
@@ -121,6 +124,7 @@
                 //variables to store false positive spoofing settings
                 std::vector<double> current_FP_spoofing_positions_m;
                 std::vector<double> current_FP_spoofing_velocities_m_s;
+                bool FP_spoof_realistic_movement_enabled;
                 bool FP_spoof_enable;
 
                 //variables to control jamming attacks
@@ -200,11 +204,13 @@
                                                                     current_victim_vel_m_s(rhs.current_victim_vel_m_s),
                                                                     current_FN_spoofing_pos_m(rhs.current_FN_spoofing_pos_m),
                                                                     current_FN_spoofing_vel_m_s(rhs.current_FN_spoofing_vel_m_s),
+                                                                    FN_spoof_realistic_movement_enabled(rhs.FN_spoof_realistic_movement_enabled),
                                                                     FN_spoof_enable(rhs.FN_spoof_enable),
                                                                     sim_vel_attack_enable(rhs.sim_vel_attack_enable),
                                                                     sim_slope_attack_enable(rhs.sim_slope_attack_enable),
                                                                     current_FP_spoofing_positions_m(rhs.current_FP_spoofing_positions_m),
                                                                     current_FP_spoofing_velocities_m_s(rhs.current_FP_spoofing_velocities_m_s),
+                                                                    FP_spoof_realistic_movement_enabled(rhs.FP_spoof_realistic_movement_enabled),
                                                                     FP_spoof_enable(rhs.FP_spoof_enable),
                                                                     jamming_enabled(rhs.jamming_enabled),
                                                                     jam_on_parameter_randomization(rhs.jam_on_parameter_randomization),
@@ -260,11 +266,13 @@
                         current_victim_vel_m_s = rhs.current_victim_vel_m_s;
                         current_FN_spoofing_pos_m = rhs.current_FN_spoofing_pos_m;
                         current_FN_spoofing_vel_m_s = rhs.current_FN_spoofing_vel_m_s;
+                        FN_spoof_realistic_movement_enabled = rhs.FN_spoof_realistic_movement_enabled;
                         FN_spoof_enable = FN_spoof_enable;
                         sim_vel_attack_enable = sim_vel_attack_enable;
                         sim_slope_attack_enable = sim_slope_attack_enable;
                         current_FP_spoofing_positions_m = current_FP_spoofing_positions_m;
                         current_FP_spoofing_velocities_m_s = current_FP_spoofing_velocities_m_s;
+                        FP_spoof_realistic_movement_enabled = rhs.FP_spoof_realistic_movement_enabled;
                         FP_spoof_enable = FP_spoof_enable;
                         jamming_enabled = jamming_enabled;
                         jam_on_parameter_randomization = jam_on_parameter_randomization;
@@ -379,6 +387,12 @@
                         config_good = false;
                     }
 
+                    //realistic movement for spoofing attacks
+                    if(config["AttackSubsystemSettings"]["FP_spoof_realistic_movement_enabled"].is_null()){
+                        std::cerr << "AttackSubsystem::check_config: no FP_spoof_realistic_movement_enabled in JSON" <<std::endl;
+                        config_good = false;
+                    }
+
                     //TODO: add ability to load these in from a file if possible
                     //FP spoofing enabled
                     if(config["AttackSubsystemSettings"]["FP_spoof_enable"].is_null()){
@@ -398,6 +412,12 @@
                         config_good = false;
                     }
 
+                    //realistic movement for FN spoofing attacks
+                    if(config["AttackSubsystemSettings"]["FN_spoof_realistic_movement_enabled"].is_null()){
+                        std::cerr << "AttackSubsystem::check_config: no FN_spoof_realistic_movement_enabled in JSON" <<std::endl;
+                        config_good = false;
+                    }
+                    
                     //FN spoofing enabled
                     if(config["AttackSubsystemSettings"]["FN_spoof_enable"].is_null()){
                         std::cerr << "AttackSubsystem::check_config: no FN_spoof_enable in JSON" <<std::endl;
@@ -544,21 +564,24 @@
                     {
                         //load the spoofing values from a file instead
                         std::vector<double> spoof_velocities_m_s = get_velocity_spoofs_from_file(run_number);
-                        std::vector<double> spoof_ranges_m = get_range_spoofs_from_file(run_number);
-
+                        std::vector<double> spoof_ranges_m = get_range_spoofs_from_file(run_number);                        
+                        
                         //configure FN spoofing
+                        FN_spoof_realistic_movement_enabled = config["AttackSubsystemSettings"]["FN_spoof_realistic_movement_enabled"].get<bool>();
                         FN_spoof_enable = config["AttackSubsystemSettings"]["FN_spoof_enable"].get<bool>();
                         sim_vel_attack_enable = config["AttackSubsystemSettings"]["sim_vel_attack_enable"].get<bool>();
                         sim_slope_attack_enable = config["AttackSubsystemSettings"]["sim_slope_attack_enable"].get<bool>();
                         set_FN_spoof_pos_vel(spoof_ranges_m[0],spoof_velocities_m_s[0]);
 
                         //configure Fp spoofing
+                        FP_spoof_realistic_movement_enabled = config["AttackSubsystemSettings"]["FP_spoof_realistic_movement_enabled"].get<bool>();
                         FP_spoof_enable = config["AttackSubsystemSettings"]["FP_spoof_enable"].get<bool>();
                         set_FP_spoof_pos_vel(spoof_ranges_m,spoof_velocities_m_s);
                     }
                     else
-                    {
+                    {                        
                         //configure FN spoofing
+                        FN_spoof_realistic_movement_enabled = config["AttackSubsystemSettings"]["FN_spoof_realistic_movement_enabled"].get<bool>();
                         FN_spoof_enable = config["AttackSubsystemSettings"]["FN_spoof_enable"].get<bool>();
                         sim_vel_attack_enable = config["AttackSubsystemSettings"]["sim_vel_attack_enable"].get<bool>();
                         sim_slope_attack_enable = config["AttackSubsystemSettings"]["sim_slope_attack_enable"].get<bool>();
@@ -567,6 +590,7 @@
                         set_FN_spoof_pos_vel(FN_spoof_pos_m,FN_spoof_vel_m_s);
 
                         //configure Fp spoofing
+                        FP_spoof_realistic_movement_enabled = config["AttackSubsystemSettings"]["FP_spoof_realistic_movement_enabled"].get<bool>();
                         FP_spoof_enable = config["AttackSubsystemSettings"]["FP_spoof_enable"].get<bool>();
                         std::vector<double> FP_spoof_pos_m = config["AttackSubsystemSettings"]["FP_spoof_distances_m"].get<std::vector<double>>();
                         std::vector<double> FP_spoof_vel_m_s = config["AttackSubsystemSettings"]["FP_spoof_vels_m_s"].get<std::vector<double>>();
@@ -796,6 +820,11 @@
                             //transmit the attack
                             attacker_usrp_handler -> stream_frames_tx_only(frame_start_time, & USRP_attack_signal_buffer);
 
+                            //simulate realistic spoofing propagation if enabled
+                            if(FP_spoof_realistic_movement_enabled || FN_spoof_realistic_movement_enabled){
+                                simulate_realistic_spoof_movement();
+                            }
+                            
                             //compute the next attack signal
                             compute_attack_signals();
 
@@ -884,8 +913,8 @@
                 /**
                  * @brief Set the current FP spoofing positions and velocities
                  * 
-                 * @param pos_m a vector containing the desired positions to launch FP spoofing attacks
-                 * @param vel_m_s a vector containing the desired velocities to launch FN spoofing attacks
+                 * @param positions_m a vector containing the desired positions to launch FP spoofing attacks
+                 * @param velocities_m_s a vector containing the desired velocities to launch FN spoofing attacks
                  */
                 void set_FP_spoof_pos_vel(std::vector<double> positions_m, std::vector<double> velocities_m_s){
                     
@@ -896,6 +925,30 @@
 
             private: //the following functions are support functions intented to support the public functions above
 
+                /**
+                 * @brief Simulates the realistic movement of spoofed objects if spoof_realistic_movement_enabled is true
+                 * 
+                 */
+                void simulate_realistic_spoof_movement(){
+                    //update FN spoofing position
+                    if(FN_spoof_enable && FN_spoof_realistic_movement_enabled){
+                        //positive velocities indicated that the object is getting closer
+                        double new_pos_m = current_FN_spoofing_pos_m - (current_FN_spoofing_vel_m_s * estimated_frame_periodicity_ms * 1e-3);
+                        set_FN_spoof_pos_vel(new_pos_m,current_FN_spoofing_vel_m_s);
+                    }
+
+                    //update FP spoofing positions
+                    if(FP_spoof_enable && FP_spoof_realistic_movement_enabled){
+                        std::vector<double> new_positions(current_FP_spoofing_positions_m.size(),0.0);
+                        for (size_t i = 0; i < current_FP_spoofing_positions_m.size(); i++)
+                        {
+                            new_positions[i] = current_FP_spoofing_positions_m[i] - (current_FP_spoofing_velocities_m_s[i] * estimated_frame_periodicity_ms * 1e-3);
+                        }
+                        set_FP_spoof_pos_vel(new_positions,current_FP_spoofing_velocities_m_s);
+                        
+                    }
+                }
+                
                 /**
                  * @brief Compute the the "calculated" victim parameters including
                  * num samples per chirp, sweep time, and idle time. Function also
@@ -1142,7 +1195,7 @@
                         spoof_time_delay_s,
                         phase_shifts,
                         spoof_power_scaling * additional_power_scaling,
-                        8, //max number of threads
+                        12, //max number of threads
                         false //overwrite attack chirps buffer
                         );
 
