@@ -1105,6 +1105,16 @@
                     auto start = high_resolution_clock::now();
 
                     //determine the number of spoofed signals
+                    if(FN_spoof_enable && FP_spoof_enable){
+                        num_spoofing_signals = current_FP_spoofing_positions_m.size() + 1;
+                    } else if (FN_spoof_enable){
+                        num_spoofing_signals = 1;
+                    } else if (FP_spoof_enable){
+                        num_spoofing_signals = current_FP_spoofing_positions_m.size();
+                    } else {
+                        num_spoofing_signals = 0;
+                    }
+
                     num_spoofing_signals = FN_spoof_enable ? 
                         current_FP_spoofing_positions_m.size() + 1 //if FN spoof is enabled
                         : current_FP_spoofing_positions_m.size(); //if FN spoof is not enabled
