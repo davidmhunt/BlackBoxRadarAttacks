@@ -124,21 +124,21 @@ classdef Radar_Signal_Processor_revA < handle
                 frequency components in a signal
             %}
             
-            pass_band_start_freq_Hz = 10 * obj.Radar.Range_Res_m * 2 * ...
+            pass_band_start_freq_Hz = 3 * obj.Radar.Range_Res_m * 2 * ...
                 obj.Radar.FrequencySlope_MHz_us * 1e12 / physconst('LightSpeed');
-            stop_band_start_freq_Hz = 5 * obj.Radar.Range_Res_m * 2 * ...
+            stop_band_start_freq_Hz = 1 * obj.Radar.Range_Res_m * 2 * ...
                 obj.Radar.FrequencySlope_MHz_us * 1e12 / physconst('LightSpeed');
 
-            obj.Fp = pass_band_start_freq_Hz;                                  %start frequency of pass band
-            obj.Fst = stop_band_start_freq_Hz;                                 %start of stop band 
+            obj.Fp = 7 * 1e6;                                  %start frequency of pass band
+            obj.Fst = 13 * 1e6;                                 %start of stop band 
             obj.Ap = 0.5;                                       %ripple to allow in the pass band
             obj.Ast = 40;                                       %attenuation in the stop band
             obj.Fs = obj.Radar.FMCW_sampling_rate_Hz;           %sampling frequency of the Radar object
             
-            d = fdesign.highpass('Fst,Fp,Ast,Ap',obj.Fst,obj.Fp,obj.Ast,obj.Ap,obj.Fs);
+            d = fdesign.highpass('Fp,Fst,Ap,Ast',obj.Fp,obj.Fst,obj.Ap,obj.Ast,obj.Fs);
             obj.high_pass_filter = design(d,'butter','MatchExactly','passband');
-%             Hd = design(d,'equiripple');
-%             fvtool(obj.high_pass_filter)
+            Hd = design(d,'equiripple');
+            fvtool(Hd)
         end
 
         function configure_decimator(obj)
@@ -344,9 +344,6 @@ classdef Radar_Signal_Processor_revA < handle
             %}
             %dechirp the received signal
             sampled_IF_sig = dechirp(Rx_sig,Tx_sig);
-
-            %remove DC terms
-%             sampled_IF_sig = filter(obj.high_pass_filter,sampled_IF_sig);
 
             %run the sampled IF signal through a decimator
             sampled_IF_sig = obj.FIRDecimator(sampled_IF_sig);
