@@ -85,13 +85,12 @@
             //timing parameters
             double detection_start_time_us;
             const double c = 2.99792458e8;
-            size_t chirp_tracking_num_captured_chirps;
-            double chirp_tracking_average_slope; //in MHz/us
-            double chirp_tracking_average_chirp_duration; //in us
             size_t frame_tracking_num_captured_frames;
             double frame_tracking_average_frame_duration_us;
             double frame_tracking_average_chirp_duration_us;
             double frame_tracking_average_chirp_slope_MHz_us;
+
+
 
             //precise timing parameters
             size_t xcorr_max_lag;
@@ -155,10 +154,14 @@
                 //buffer containing the victim's estimated waveform
                 Buffer_1D<std::complex<data_type>> computed_victim_chirp;
 
-            
+        private:
+
+            //parameter randomization detection
+            bool randomization_detected;
+
             //debug status
             bool debug;
-
+        public:
             //save file path
             std::string save_file_path;
 
@@ -207,9 +210,6 @@
                                                                 max_cluster_index(rhs.max_cluster_index),
                                                                 detection_start_time_us(rhs.detection_start_time_us),
                                                                 c(rhs.c),
-                                                                chirp_tracking_num_captured_chirps(rhs.chirp_tracking_num_captured_chirps),
-                                                                chirp_tracking_average_slope(rhs.chirp_tracking_average_slope),
-                                                                chirp_tracking_average_chirp_duration(rhs.chirp_tracking_average_chirp_duration),
                                                                 frame_tracking_num_captured_frames(rhs.frame_tracking_num_captured_frames),
                                                                 frame_tracking_average_frame_duration_us(rhs.frame_tracking_average_frame_duration_us),
                                                                 frame_tracking_average_chirp_duration_us(rhs.frame_tracking_average_chirp_duration_us),
@@ -241,6 +241,7 @@
                                                                 frame_period_us_estimator_buffer(rhs.frame_period_us_estimator_buffer),
                                                                 captured_frames(rhs.captured_frames),
                                                                 computed_victim_chirp(rhs.computed_victim_chirp),
+                                                                randomization_detected(rhs.randomization_detected),
                                                                 debug(rhs.debug),
                                                                 save_file_path(rhs.save_file_path)
                                                                 {}
@@ -277,9 +278,6 @@
                     max_cluster_index = rhs.max_cluster_index;
                     detection_start_time_us = rhs.detection_start_time_us;
                     c = rhs.c;
-                    chirp_tracking_num_captured_chirps = rhs.chirp_tracking_num_captured_chirps;
-                    chirp_tracking_average_slope = rhs.chirp_tracking_average_slope;
-                    chirp_tracking_average_chirp_duration = rhs.chirp_tracking_average_chirp_duration;
                     frame_tracking_num_captured_frames = rhs.frame_tracking_num_captured_frames;
                     frame_tracking_average_frame_duration_us = rhs.frame_tracking_average_frame_duration_us;
                     frame_tracking_average_chirp_duration_us = rhs.frame_tracking_average_chirp_duration_us;
@@ -311,6 +309,7 @@
                     frame_period_us_estimator_buffer = rhs.frame_period_us_estimator_buffer;
                     captured_frames = rhs.captured_frames;
                     computed_victim_chirp = rhs.computed_victim_chirp;
+                    randomization_detected = rhs.randomization_detected;
                     debug = rhs.debug;
                     save_file_path = rhs.save_file_path;
                 }
@@ -337,6 +336,7 @@
                     initialize_clustering_params();
                     initialize_chirp_and_frame_tracking();
                     initialize_precise_timing_estimates();
+                    initialize_parameter_randomization_detection();
                     initialize_debug();
                     initialize_save_file_path();
                 }
@@ -429,6 +429,16 @@
 
                 if(config["SensingSubsystemSettings"]["max_waiting_time_ms"].is_null()){
                     std::cerr << "SpectrogramHandler::check_config: max_waiting_time_ms not specified" <<std::endl;
+                    config_good = false;
+                }
+
+                if(config["SensingSubsystemSettings"]["randomization_detection"]["frame_period_us"]["threshold"].is_null()){
+                    std::cerr << "SpectrogramHandler::check_config: frame period randomization detection threshold not specified" <<std::endl;
+                    config_good = false;
+                }
+
+                if(config["SensingSubsystemSettings"]["randomization_detection"]["frame_period_us"]["num_samples"].is_null()){
+                    std::cerr << "SpectrogramHandler::check_config: frame period randomization detection num_samples not specified" <<std::endl;
                     config_good = false;
                 }
 
@@ -544,8 +554,7 @@
                 
                 slope_MHz_us_estimator_buffer = Parameter_Estimation_Buffer<double>(max_chirps_to_capture);
                 chirp_period_us_estimator_buffer = Parameter_Estimation_Buffer<double>(max_chirps_to_capture);
-                frame_period_us_estimator_buffer = Parameter_Estimation_Buffer<double>(max_frames_to_capture);
-                
+                frame_period_us_estimator_buffer = Parameter_Estimation_Buffer<double>(max_frames_to_capture);  
             }
 
             /**
@@ -621,10 +630,6 @@
              * 
              */
             void initialize_chirp_and_frame_tracking(){
-                //chirp tracking
-                chirp_tracking_num_captured_chirps = 0;
-                chirp_tracking_average_slope = 0;
-                chirp_tracking_average_chirp_duration = 0;
 
                 //frame tracking
                 frame_tracking_num_captured_frames = 0;
@@ -640,6 +645,28 @@
                 attack_in_progress = false;
             }
 
+            /**
+             * @brief Initialize parameter randomization detected including the threshold and number of samples for each parameter estimation buffer
+             * 
+             */
+            void initialize_parameter_randomization_detection(){
+
+                //set randomization_detected flag to false
+                randomization_detected = false;
+                
+                //initialize frame period randomization detection
+                double threshold = config["SensingSubsystemSettings"]["randomization_detection"]["frame_period_us"]["threshold"].get<double>();
+                size_t num_samples = config["SensingSubsystemSettings"]["randomization_detection"]["frame_period_us"]["num_samples"].get<size_t>();
+
+                frame_period_us_estimator_buffer.configure_randomization_detection(threshold,num_samples);
+
+                //TODO: add support for detecting randomization in the slope and chirp period
+            }
+
+            /**
+             * @brief Initialize precise timing estimation parameters including the victim waveform and xcorrelation parameters
+             * 
+             */
             void initialize_precise_timing_estimates(){
                 
                 //set victim_waveform_loaded flag to false
@@ -693,6 +720,7 @@
                 initialize_clustering_params();
                 initialize_chirp_and_frame_tracking();
                 initialize_precise_timing_estimates();
+                initialize_parameter_randomization_detection();
                 initialize_debug();
                 initialize_save_file_path();
             }
@@ -727,6 +755,9 @@
                 {
                     compute_linear_model();
                     compute_victim_parameters();
+
+                    //detect parameter randomization
+                    update_parameter_randomization();
 
                     //mark stop time
                     auto stop = high_resolution_clock::now();
@@ -1065,29 +1096,7 @@
                 
                 //TODO: revise this process to store a series of tracked chirps and frames so as to be able to filter out outliers as needed
                 if(not attack_in_progress){
-                    //determine the number of chirps detected
-                    chirp_tracking_num_captured_chirps = detected_slopes_MHz_us.num_samples;
-
-/*
-                    //detected times and frequencies
-                    std::string folder_path = "/home/david/Documents/MATLAB_generated/cpp_sensed_parameters/";
-                    std::string path = folder_path + "cpp_detected_times.bin";
-                    detected_times.set_write_file(path,true);
-                    detected_times.save_to_file();
-                    path = folder_path + "cpp_detected_frequencies.bin";
-                    detected_frequencies.set_write_file(path,true);
-                    detected_frequencies.save_to_file();
-
-                    //computed clusters
-                    path = folder_path + "cpp_computed_clusters.bin";
-                    cluster_indicies.set_write_file(path,true);
-                    cluster_indicies.save_to_file();
-
-                    //spectrogram 
-                    path = folder_path + "cpp_generated_spectrogram.bin";
-                    generated_spectrogram.set_write_file(path,true);
-                    generated_spectrogram.save_to_file();
-*/                    
+          
                     //save the estimates to the parameter estimator buffers
                     slope_MHz_us_estimator_buffer.load_estimates(detected_slopes_MHz_us.buffer);
                     chirp_period_us_estimator_buffer.load_estimates_from_intercepts(detected_intercepts_us.buffer);
@@ -1139,6 +1148,16 @@
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][0] = 0;
                     captured_frames.buffer[frame_tracking_num_captured_frames - 1][5] = 0;
                 }
+            }
+
+            void update_parameter_randomization(){
+                
+                //check frame parameter randomization
+                if (frame_period_us_estimator_buffer.get_randomization_detected())
+                {
+                    randomization_detected = true;
+                }
+                
             }
 
             double compute_precise_frame_start_time(double estimated_start_time_us){
@@ -1305,6 +1324,10 @@
                 return frame_tracking_average_frame_duration_us * 1e-3;
             }
 
+            bool get_parameter_randomization_detection_status(){
+                return randomization_detected;
+            }
+
             /**
              * @brief Set the attack in progress flag (on true, spectrogram handler changes behavior to avoid interference with attacking subsystem)
              * 
@@ -1328,6 +1351,9 @@
                 std::cout << "SpectrogramHandler::print_summary_of_estimated_parameters: average chirp slope: " <<
                     slope_MHz_us_estimator_buffer.get_mean() << "MHz/us" <<
                     "(variance: " << slope_MHz_us_estimator_buffer.get_variance() << ")" << std::endl;
+                std::string randomization_status = randomization_detected ? "true" : "false";
+                std::cout << "SpectrogramHandler::print_summary_of_estimated_parameters: Parameter randomization detected: " <<
+                    randomization_status << std::endl;
             }
 
             /**

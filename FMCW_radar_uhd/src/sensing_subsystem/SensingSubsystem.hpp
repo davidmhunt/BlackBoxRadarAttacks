@@ -219,7 +219,8 @@
                                     spectrogram_handler.get_average_chirp_duration_us(),
                                     spectrogram_handler.get_average_chirp_slope_MHz_us(),
                                     spectrogram_handler.get_average_frame_duration_ms(),
-                                    chirps_to_compute
+                                    chirps_to_compute,
+                                    spectrogram_handler.get_parameter_randomization_detection_status()
                                 );
                                 spectrogram_handler.load_computed_victim_chirp(attacking_subsystem -> victim_waveform.buffer);
                             }
@@ -235,6 +236,7 @@
                             }
                         }
                         else{
+                            //in the case that no points were detected in the received spectrogram (i.e: false positive frame start time)
                             energy_detector.reset_chirp_detector();
 
                             next_rx_sense_start_time = 

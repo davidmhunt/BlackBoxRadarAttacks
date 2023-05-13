@@ -30,7 +30,7 @@ classdef Radar_Signal_Processor_revA < handle
         Ap                      %ripple to allow in the pass band
         Ast                     %attenuation in the stop band
         Fs                      %sampling frequency
-        low_pass_filter         %low pass filter object
+        high_pass_filter         %low pass filter object
 
         %instead of a lowpass filter, using a decimator (used int he
         %simulink model
@@ -107,7 +107,7 @@ classdef Radar_Signal_Processor_revA < handle
                 Processing components by calling the other configuration
                 functions
             %}
-            obj.configure_lowpass_filter();
+            obj.configure_highpass_filter();
             obj.configure_decimator();
             obj.configure_select_sampled_IF_sig();
             obj.configure_RangeDopplerResponse();
@@ -117,25 +117,28 @@ classdef Radar_Signal_Processor_revA < handle
             obj.reset_radar_cube();
         end
         
-        function configure_lowpass_filter(obj)
+        function configure_highpass_filter(obj)
             %{
                 Purpose: function configures the lowpass filter that will
                 be used to simulate how the ADC and mixer attenuate higher
                 frequency components in a signal
             %}
             
-            obj.Fp = 9 * 1e6; %for sensing subsystem tests                                  
-            obj.Fst = 12 * 1e6; %for sensing subsystem tests
-%             obj.Fp = 7 * 1e6;                                  %start frequency of pass band
-%             obj.Fst = 13 * 1e6;                                 %start of stop band 
+            pass_band_start_freq_Hz = 10 * obj.Radar.Range_Res_m * 2 * ...
+                obj.Radar.FrequencySlope_MHz_us * 1e12 / physconst('LightSpeed');
+            stop_band_start_freq_Hz = 5 * obj.Radar.Range_Res_m * 2 * ...
+                obj.Radar.FrequencySlope_MHz_us * 1e12 / physconst('LightSpeed');
+
+            obj.Fp = pass_band_start_freq_Hz;                                  %start frequency of pass band
+            obj.Fst = stop_band_start_freq_Hz;                                 %start of stop band 
             obj.Ap = 0.5;                                       %ripple to allow in the pass band
             obj.Ast = 40;                                       %attenuation in the stop band
             obj.Fs = obj.Radar.FMCW_sampling_rate_Hz;           %sampling frequency of the Radar object
             
-            d = fdesign.lowpass('Fp,Fst,Ap,Ast',obj.Fp,obj.Fst,obj.Ap,obj.Ast,obj.Fs);
-            obj.low_pass_filter = design(d,'butter','MatchExactly','passband');
-%             %Hd = design(d,'equiripple');
-%             %fvtool(Hd)
+            d = fdesign.highpass('Fst,Fp,Ast,Ap',obj.Fst,obj.Fp,obj.Ast,obj.Ap,obj.Fs);
+            obj.high_pass_filter = design(d,'butter','MatchExactly','passband');
+%             Hd = design(d,'equiripple');
+%             fvtool(obj.high_pass_filter)
         end
 
         function configure_decimator(obj)
@@ -341,6 +344,9 @@ classdef Radar_Signal_Processor_revA < handle
             %}
             %dechirp the received signal
             sampled_IF_sig = dechirp(Rx_sig,Tx_sig);
+
+            %remove DC terms
+%             sampled_IF_sig = filter(obj.high_pass_filter,sampled_IF_sig);
 
             %run the sampled IF signal through a decimator
             sampled_IF_sig = obj.FIRDecimator(sampled_IF_sig);
