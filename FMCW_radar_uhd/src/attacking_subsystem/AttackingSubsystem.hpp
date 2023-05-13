@@ -126,6 +126,7 @@
                 std::vector<double> current_FP_spoofing_velocities_m_s;
                 bool FP_spoof_realistic_movement_enabled;
                 bool FP_spoof_enable;
+                bool FP_spoof_power_scaling_enabled;
 
                 //variables to control jamming attacks
                 bool jamming_enabled;
@@ -212,6 +213,7 @@
                                                                     current_FP_spoofing_velocities_m_s(rhs.current_FP_spoofing_velocities_m_s),
                                                                     FP_spoof_realistic_movement_enabled(rhs.FP_spoof_realistic_movement_enabled),
                                                                     FP_spoof_enable(rhs.FP_spoof_enable),
+                                                                    FP_spoof_power_scaling_enabled(rhs.FP_spoof_power_scaling_enabled),
                                                                     jamming_enabled(rhs.jamming_enabled),
                                                                     jam_on_parameter_randomization(rhs.jam_on_parameter_randomization),
                                                                     jamming_range_span_m(rhs.jamming_range_span_m),
@@ -267,17 +269,18 @@
                         current_FN_spoofing_pos_m = rhs.current_FN_spoofing_pos_m;
                         current_FN_spoofing_vel_m_s = rhs.current_FN_spoofing_vel_m_s;
                         FN_spoof_realistic_movement_enabled = rhs.FN_spoof_realistic_movement_enabled;
-                        FN_spoof_enable = FN_spoof_enable;
-                        sim_vel_attack_enable = sim_vel_attack_enable;
-                        sim_slope_attack_enable = sim_slope_attack_enable;
-                        current_FP_spoofing_positions_m = current_FP_spoofing_positions_m;
-                        current_FP_spoofing_velocities_m_s = current_FP_spoofing_velocities_m_s;
+                        FN_spoof_enable = rhs.FN_spoof_enable;
+                        sim_vel_attack_enable = rhs.sim_vel_attack_enable;
+                        sim_slope_attack_enable = rhs.sim_slope_attack_enable;
+                        current_FP_spoofing_positions_m = rhs.current_FP_spoofing_positions_m;
+                        current_FP_spoofing_velocities_m_s = rhs.current_FP_spoofing_velocities_m_s;
                         FP_spoof_realistic_movement_enabled = rhs.FP_spoof_realistic_movement_enabled;
-                        FP_spoof_enable = FP_spoof_enable;
-                        jamming_enabled = jamming_enabled;
-                        jam_on_parameter_randomization = jam_on_parameter_randomization;
-                        jamming_range_span_m = jamming_range_span_m;
-                        num_spoofing_signals = num_spoofing_signals;
+                        FP_spoof_enable = rhs.FP_spoof_enable;
+                        FP_spoof_power_scaling_enabled = rhs.FP_spoof_power_scaling_enabled;
+                        jamming_enabled = rhs.amming_enabled;
+                        jam_on_parameter_randomization = rhs.jam_on_parameter_randomization;
+                        jamming_range_span_m = rhs.jamming_range_span_m;
+                        num_spoofing_signals = rhs.num_spoofing_signals;
                         samples_per_buffer = rhs.samples_per_buffer;
                         USRP_attack_signal_buffer = rhs.USRP_attack_signal_buffer;
                         attack_chirps_buffer = rhs.attack_chirps_buffer;
@@ -393,10 +396,15 @@
                         config_good = false;
                     }
 
-                    //TODO: add ability to load these in from a file if possible
                     //FP spoofing enabled
                     if(config["AttackSubsystemSettings"]["FP_spoof_enable"].is_null()){
                         std::cerr << "AttackSubsystem::check_config: no FP_spoof_enable in JSON" <<std::endl;
+                        config_good = false;
+                    }
+
+                    //FP spoof power scaling enabled
+                    if(config["AttackSubsystemSettings"]["FP_spoof_power_scaling_enabled"].is_null()){
+                        std::cerr << "AttackSubsystem::check_config: no FP_spoof_power_scaling_enabled in JSON" <<std::endl;
                         config_good = false;
                     }
 
@@ -576,6 +584,7 @@
                         //configure Fp spoofing
                         FP_spoof_realistic_movement_enabled = config["AttackSubsystemSettings"]["FP_spoof_realistic_movement_enabled"].get<bool>();
                         FP_spoof_enable = config["AttackSubsystemSettings"]["FP_spoof_enable"].get<bool>();
+                        FP_spoof_power_scaling_enabled = config["AttackSubsystemSettings"]["FP_spoof_power_scaling_enabled"].get<bool>();
                         set_FP_spoof_pos_vel(spoof_ranges_m,spoof_velocities_m_s);
                     }
                     else
@@ -592,6 +601,7 @@
                         //configure Fp spoofing
                         FP_spoof_realistic_movement_enabled = config["AttackSubsystemSettings"]["FP_spoof_realistic_movement_enabled"].get<bool>();
                         FP_spoof_enable = config["AttackSubsystemSettings"]["FP_spoof_enable"].get<bool>();
+                        FP_spoof_power_scaling_enabled = config["AttackSubsystemSettings"]["FP_spoof_power_scaling_enabled"].get<bool>();
                         std::vector<double> FP_spoof_pos_m = config["AttackSubsystemSettings"]["FP_spoof_distances_m"].get<std::vector<double>>();
                         std::vector<double> FP_spoof_vel_m_s = config["AttackSubsystemSettings"]["FP_spoof_vels_m_s"].get<std::vector<double>>();
                         set_FP_spoof_pos_vel(FP_spoof_pos_m,FP_spoof_vel_m_s);
@@ -1133,6 +1143,7 @@
                             compute_spoof_signal(
                                 current_FP_spoofing_positions_m[i],
                                 current_FP_spoofing_velocities_m_s[i],
+                                true, //FN attack
                                 false, //similar slope attack not enabled
                                 false, //similar velocity attack not enabled
                                 additional_power_scaling_FP, //apply additional power scaling
@@ -1148,6 +1159,7 @@
                         compute_spoof_signal(
                             current_FN_spoofing_pos_m,
                             current_FN_spoofing_vel_m_s,
+                            false, //not a FN attack
                             sim_slope_attack_enable, //similar slope attack not enabled
                             sim_vel_attack_enable, //similar velocity attack not enabled
                             additional_power_scaling_FN, //apply additional power scaling
@@ -1171,6 +1183,7 @@
                  * 
                  * @param spoof_distance_m the distance to spoof at
                  * @param spoof_velocity_m_s the velocity to spoof at
+                 * @param FP_attack set to true if attack is FP attack
                  * @param similar_slope_attack On True, computes signal of a similar slope attack. Defaults to False
                  * @param similar_velocity_attack On True, computes the signal of a similar velocity attack. Defaults to False.
                  * @param additional_power_scaling Additional power scaling to apply (if multiple signals are being transmitted). Defaults to 1.0 (no additional power scaling)
@@ -1179,6 +1192,7 @@
                 void compute_spoof_signal(
                     double spoof_distance_m,
                     double spoof_velocity_m_s,
+                    bool FP_attack,
                     bool similar_slope_attack = false,
                     bool similar_velocity_attack = false,
                     double additional_power_scaling = 1.0,
@@ -1194,9 +1208,15 @@
                     //compute the requisite parameters
                     double spoof_slope_MHz_us = compute_spoof_slope_MHz_us(similar_slope_attack);
                     double spoof_time_delay_s = compute_spoof_time_delay_s(spoof_distance_m,similar_slope_attack,spoof_slope_MHz_us);
-                    //double spoof_power_scaling = compute_spoof_power_scaling(spoof_distance_m,(similar_slope_attack || similar_velocity_attack));
-                    //TODO: re-enable power scaling and refine the method further
-                    double spoof_power_scaling = 0.25;
+
+                    //set the spoof power scaling amount
+                    double spoof_power_scaling;
+                    if(FP_attack && FP_spoof_power_scaling_enabled){
+                        spoof_power_scaling = 0.5 * compute_FP_spoof_power_scaling(spoof_distance_m);
+                    }
+                    else{
+                        spoof_power_scaling = 0.5;
+                    }
                     std::vector<double> phase_shifts(chirps_per_frame,0);
                     compute_spoof_chirp_phase_shifts_rad(phase_shifts,spoof_velocity_m_s,similar_velocity_attack);
 
@@ -1422,18 +1442,13 @@
                 /**
                  * @brief Compute the amount to scale the spoofed signal's power by to replicate realistic loss due to propagation for spoofing objects
                  * 
-                 * @param spoof_distance_m 
-                 * @param FN_attack 
+                 * @param spoof_distance_m the distance of the spoofed object
                  * @return double 
                  */
-                double compute_spoof_power_scaling(double spoof_distance_m, bool FN_attack = false){
+                double compute_FP_spoof_power_scaling(double spoof_distance_m){
                     
                     //if this is a false negative attack, do not cause any backoff
-                    if (FN_attack)
-                    {
-                        return 1.0;
-                    }
-                    else if (spoof_distance_m < current_victim_pos_m)
+                    if (spoof_distance_m < current_victim_pos_m)
                     {
                         //attack will transmit at full power if attacker is further away than desired spoofing distance
                         return 1.0;

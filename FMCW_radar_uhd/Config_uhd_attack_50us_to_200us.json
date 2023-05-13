@@ -72,6 +72,7 @@
         "current_victim_vel_m_s": -40,
         "FP_spoof_enable":true,
         "FP_spoof_realistic_movement_enabled": true,
+        "FP_spoof_power_scaling_enabled":true,
         "FP_spoof_distances_m": [150],
         "FP_spoof_vels_m_s": [-20],
         "FN_spoof_enable": false,
