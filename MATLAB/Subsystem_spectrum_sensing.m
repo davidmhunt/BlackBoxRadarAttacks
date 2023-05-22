@@ -91,12 +91,12 @@ classdef Subsystem_spectrum_sensing < handle
             obj.FMCW_sample_rate_Msps = FMCW_sample_rate_Msps;
 
             %initialize rx_buffers for energy detection
-            obj.configure_rx_buffers(obj.FMCW_sample_rate_Msps,5); %specify 5ms of capture for noise computation
+            obj.configure_rx_buffers(obj.FMCW_sample_rate_Msps,10); %specify 5ms of capture for noise computation
             obj.state = "Measuring Noise"; 
 
             %initialize the remaining parameters
             obj.initialize_detection_params();
-            obj.initialize_timing_params(20); %specify 20 ms of processing delay
+            obj.initialize_timing_params(200); %specify 20 ms of processing delay
             obj.initialize_spectogram_params(FMCW_sample_rate_Msps);
             obj.initialize_chirp_and_frame_tracking();
             obj.initialize_plot_params(FMCW_sample_rate_Msps);
@@ -199,7 +199,7 @@ classdef Subsystem_spectrum_sensing < handle
             if obj.FMCW_sample_rate_Msps > 500
                 obj.spectogram_params.freq_sampling_period_us = 0.5;
             else
-                obj.spectogram_params.freq_sampling_period_us = 2;
+                obj.spectogram_params.freq_sampling_period_us = 15; %previously 2us
             end 
             obj.spectogram_params.num_samples_per_sampling_window = ...
                 ceil(obj.spectogram_params.freq_sampling_period_us * FMCW_sample_rate_Msps);
@@ -410,7 +410,7 @@ classdef Subsystem_spectrum_sensing < handle
                        [next_signal_index,import_complete] = obj.simulate_processing(signal,next_signal_index);
                        if obj.current_processing_delay == obj.processing_delay_samples
                            obj.state = "Waiting for Chirp";
-                           obj.configure_rx_buffers(obj.FMCW_sample_rate_Msps,2);%specify 2ms for recording samples once triggered
+                           obj.configure_rx_buffers(obj.FMCW_sample_rate_Msps,10);%specify 2ms for recording samples once triggered
                        end
                     otherwise
                 end
@@ -811,12 +811,8 @@ classdef Subsystem_spectrum_sensing < handle
             for i = 2:num_points
                 %determine if the current point is part of a new chirp or
                 %not
-                if((obj.detected_frequencies(i) - obj.detected_frequencies(i-1) > 3) ||...
-                       (( obj.detected_times(i) - obj.detected_times(i-1) < 5) && ...
-                       (obj.detected_frequencies(i) - obj.detected_frequencies(i-1) >= 0)))
-%                 if((obj.detected_frequencies(i) - obj.detected_frequencies(i-1) > -1) && ...
-%                     (obj.detected_times(i) - obj.detected_times(i-1) < 5))
-                    %part of the current chirp
+                if((obj.detected_frequencies(i) - obj.detected_frequencies(i-1) > -1)...
+                        && (obj.detected_frequencies(i) >= 2))
                     num_points_in_chirp = num_points_in_chirp + 1;
                 else
                     %part of a new chirp, make sure there are enough points
@@ -1030,7 +1026,7 @@ classdef Subsystem_spectrum_sensing < handle
             %}
             
             %full window size to use for cross-correlation
-            max_lag = 400;1,
+            max_lag = 400;
             observation_window_time_us = 10;
             observation_window_samples = 2 * ceil(0.5 * observation_window_time_us *...
                 obj.FMCW_sample_rate_Msps); %make sure it is an even number
