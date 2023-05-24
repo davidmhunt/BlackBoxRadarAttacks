@@ -1,8 +1,8 @@
 {
     "Radar_enabled":true,
-    "Attacker_enabled":true,
+    "Attacker_enabled":false,
     "multiple_runs": {
-        "perform_multiple_runs": true,
+        "perform_multiple_runs": false,
         "num_runs": 150,
         "evaluate_spoofing": true,
         "evaluate_parameter_estimation": false    
