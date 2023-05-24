@@ -390,7 +390,7 @@ classdef characterization_functions
             [h,stats] = cdfplot(abs_errors);
             h.LineWidth = 2.0;
             xlabel(metric_title + " " + metric_units,"FontSize",font_size);
-            title("CDF of Absolute " + metric_title + " Error","FontSize",font_size);
+            title({"CDF of Absolute " ; metric_title + " Error"},"FontSize",font_size);
             ax = gca;
             ax.FontSize = font_size;
             if max(abs_errors) > 5 * tail
@@ -1570,7 +1570,7 @@ classdef characterization_functions
                 ranges(i) = rand * (valid_ranges(2) - valid_ranges(1)) + valid_ranges(1);
     
                 %select a random velocity
-                velocities(i) = rand * (valid_velocities(2) - valid_velocities(1)) + valid_velocities(1);
+                velocities(i) = sign(randn) * rand * (valid_velocities(2) - valid_velocities(1)) + valid_velocities(1);
             end
         end
 
@@ -1682,15 +1682,18 @@ classdef characterization_functions
             
                     [estimated_ranges,estimated_velocities,...
                     desired_ranges,desired_velocities] = ...
-                            characterization_functions.USRP_compute_sensed_targets(config_path,...
+                            characterization_functions.USRP_compute_sensed_targets( ...
+                            config_path,...
                             spoof_ranges(i),...
                             spoof_velocities(i),...
                             frames_to_compute,...
-                            attack_start_frame);
+                            attack_start_frame, ...
+                            num_attack_frames, ...
+                            i);
             
                 %save values - resulting averages from simulation runs
-                start_idx = frames_per_case * (i - 1) + 1;
-                end_idx = frames_per_case * i;
+                start_idx = num_attack_frames * (i - 1) + 1;
+                end_idx = num_attack_frames * i;
                
                 test_data_spoofing_performance(start_idx:end_idx,1) = desired_ranges;
                 test_data_spoofing_performance(start_idx:end_idx,2) = desired_velocities;
@@ -1844,13 +1847,109 @@ classdef characterization_functions
                 ranges = ranges(~isnan(ranges));
                 velocities = velocities(~isnan(ranges));
                 
-                [idx, ~] = dsearchn([ranges , velocities], point);
-                closest_ranges(i) = range_detections(i,idx);
-                closest_velocities(i) = velocity_detections(i,idx);
+                if ~isempty(ranges)
+                    [idx, ~] = dsearchn([ranges , velocities], point);
+                    closest_ranges(i) = range_detections(i,idx);
+                    closest_velocities(i) = velocity_detections(i,idx);
+                else
+                    closest_ranges(i) = 0;
+                    closest_velocities(i) = 0;
+                end
             end
             
             nearest_points = [closest_ranges, closest_velocities];
         end
+
+        %{
+            Purpose: For a set of range detections and velocity detections,
+            identify which detection is closest to the given point
+            
+            Inputs:
+                Range_detections: an N x M matrix of range detections where
+                    N is the number of frames and M is the number of
+                    detections for each frame. NaN values are automitacally
+                    filtered out.
+                Velocity_detections: an N x M matrix of velocity detections
+                max_range: the maximum range for the detection region in m
+                max_vel: the maximum absolute velocity for the detection
+                    region in m/s
+                max_num_points: the maximum number of points to detect
+        %}
+        function [valid_ranges,valid_velocities] = identify_detections_in_region(...
+                                        range_detections, ...
+                                        velocity_detections, ...
+                                        max_range, ...
+                                        max_vel, ...
+                                        max_num_points)
+            num_frames = size(range_detections,1);
+            valid_ranges = zeros(num_frames,max_num_points);
+            valid_velocities = zeros(num_frames,max_num_points);
+            
+            for i = 1:num_frames
+                ranges = range_detections(i,:)';
+                velocities = velocity_detections(i,:)';
+                
+                %remove NaN values
+                ranges = ranges(~isnan(ranges));
+                velocities = velocities(~isnan(ranges));
+                
+                if ~isempty(ranges)
+                    %identify the valid points
+                    valid_idxs = (ranges <= max_range) & (abs(velocities) <= max_vel);
+                    
+                    ranges = ranges(valid_idxs);
+                    velocities = velocities(valid_idxs);
+
+                    num_valid_points = min(max_num_points,sum(valid_idxs));
+
+                    valid_ranges(i,1:num_valid_points) = ranges(1:num_valid_points);
+                    valid_velocities(i,1:num_valid_points) = velocities(1:num_valid_points);
+                end
+            end
+        end
+
+        function print_attack_frame_detections( ...
+                                            ranges, ...
+                                            velocities, ...
+                                            attack_start_frame, ...
+                                            num_attack_frames)
+            %get the detections corresponding to the attack frame
+            attack_ranges = ranges( ...
+                attack_start_frame:attack_start_frame + num_attack_frames - 1, :);
+            attack_velocities = velocities( ...
+                attack_start_frame:attack_start_frame + num_attack_frames - 1, :);
+
+            %print the attack detections out
+            %print attack ranges
+            fprintf("Detected Ranges \n")
+            fmt = ['%f\t' repmat('%f\t',1,size(attack_ranges,2)-1) '\n'];
+            fprintf(fmt,attack_ranges.')
+            
+            %print attack velocities
+            fprintf("Detected Velocities \n");
+            fmt = ['%f\t' repmat('%f\t',1,size(attack_velocities,2)-1) '\n'];
+            fprintf(fmt,attack_velocities.')
+        end
+
+        function perform_object_tracking( ...
+                                    ranges, ...
+                                    velocities, ...
+                                    frame_period_ms, ...
+                                    max_num_tracks)
+
+            %obtain specific tracking parameters
+            
+            
+            max_num_detections = size(ranges,2);
+            tracker = radarTracker( ...
+                "MaxNumTracks",max_num_tracks, ...
+                "MaxNumDetections",max_num_detections ...
+                ,"ConfirmationThreshold",)
+            
+        end
+
+
+
         
     end
 end

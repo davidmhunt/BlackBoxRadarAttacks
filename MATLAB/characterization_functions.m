@@ -1859,6 +1859,100 @@ classdef characterization_functions
             
             nearest_points = [closest_ranges, closest_velocities];
         end
+
+        %{
+            Purpose: For a set of range detections and velocity detections,
+            identify which detection is closest to the given point
+            
+            Inputs:
+                Range_detections: an N x M matrix of range detections where
+                    N is the number of frames and M is the number of
+                    detections for each frame. NaN values are automitacally
+                    filtered out.
+                Velocity_detections: an N x M matrix of velocity detections
+                max_range: the maximum range for the detection region in m
+                max_vel: the maximum absolute velocity for the detection
+                    region in m/s
+                max_num_points: the maximum number of points to detect
+        %}
+        function [valid_ranges,valid_velocities] = identify_detections_in_region(...
+                                        range_detections, ...
+                                        velocity_detections, ...
+                                        max_range, ...
+                                        max_vel, ...
+                                        max_num_points)
+            num_frames = size(range_detections,1);
+            valid_ranges = zeros(num_frames,max_num_points);
+            valid_velocities = zeros(num_frames,max_num_points);
+            
+            for i = 1:num_frames
+                ranges = range_detections(i,:)';
+                velocities = velocity_detections(i,:)';
+                
+                %remove NaN values
+                ranges = ranges(~isnan(ranges));
+                velocities = velocities(~isnan(ranges));
+                
+                if ~isempty(ranges)
+                    %identify the valid points
+                    valid_idxs = (ranges <= max_range) & (abs(velocities) <= max_vel);
+                    
+                    ranges = ranges(valid_idxs);
+                    velocities = velocities(valid_idxs);
+
+                    num_valid_points = min(max_num_points,sum(valid_idxs));
+
+                    valid_ranges(i,1:num_valid_points) = ranges(1:num_valid_points);
+                    valid_velocities(i,1:num_valid_points) = velocities(1:num_valid_points);
+                end
+            end
+        end
+
+        function print_attack_frame_detections( ...
+                                            ranges, ...
+                                            velocities, ...
+                                            attack_start_frame, ...
+                                            num_attack_frames)
+            %get the detections corresponding to the attack frame
+            attack_ranges = ranges( ...
+                attack_start_frame:attack_start_frame + num_attack_frames - 1, :);
+            attack_velocities = velocities( ...
+                attack_start_frame:attack_start_frame + num_attack_frames - 1, :);
+
+            %print the attack detections out
+            %print attack ranges
+            fprintf("Detected Ranges \n")
+            fmt = ['%f\t' repmat('%f\t',1,size(attack_ranges,2)-1) '\n'];
+            fprintf(fmt,attack_ranges.')
+            
+            %print attack velocities
+            fprintf("Detected Velocities \n");
+            fmt = ['%f\t' repmat('%f\t',1,size(attack_velocities,2)-1) '\n'];
+            fprintf(fmt,attack_velocities.')
+        end
+
+        function perform_object_tracking( ...
+                                    ranges, ...
+                                    velocities, ...
+                                    frame_period_ms, ...
+                                    max_num_tracks)
+
+            %obtain specific tracking parameters
+            max_num_detections = size(ranges,2);
+
+            confirmation_threshold = [2,4]; %track confirmed if 2 detections in last 4 updates
+            deletion_threshold = [3,5]; %track is deleted if it isn't assigned to any detections in 3 of 5 last updates
+
+            tracker = radarTracker( ...
+                "MaxNumTracks",max_num_tracks, ...
+                "MaxNumDetections",max_num_detections, ...
+                "ConfirmationThreshold",confirmation_threshold, ...
+                "DeletionThreshold",deletion_threshold,"State",[])
+            
+        end
+
+
+
         
     end
 end
