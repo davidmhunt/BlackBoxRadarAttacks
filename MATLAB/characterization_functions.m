@@ -1570,7 +1570,7 @@ classdef characterization_functions
                 ranges(i) = rand * (valid_ranges(2) - valid_ranges(1)) + valid_ranges(1);
     
                 %select a random velocity
-                velocities(i) = rand * (valid_velocities(2) - valid_velocities(1)) + valid_velocities(1);
+                velocities(i) = sign(randn) * rand * (valid_velocities(2) - valid_velocities(1)) + valid_velocities(1);
             end
         end
 
