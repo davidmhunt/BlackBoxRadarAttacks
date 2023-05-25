@@ -390,6 +390,9 @@ classdef Radar_Signal_Processor_revA < handle
             detected_ranges = detected_ranges(valid_idxs);
             detections = detections(:,valid_idxs);
             
+            fig_position = [0,0,350,350];
+            font_size = 16;
+            font_size_colorbar = 12;
             
         
             %estimate the range and the velocities
@@ -424,12 +427,11 @@ classdef Radar_Signal_Processor_revA < handle
                             obj.Radar.Range_Max_m)])
 %                     ylim([100,110])
 
-                    font_size = 16;
                     h = colorbar;
-                    h.FontSize = font_size;
+                    h.FontSize = font_size_colorbar;
                     h.Label.String = "Power (dB)";
                     h_label = h.Label;
-                    set(gcf,'Position',[100 100 350 350])
+                    set(gcf,'Position',fig_position)
                     title("Range-Doppler Response","FontSize",font_size)
                     xlabel("Velocity (m/s)","FontSize",font_size)
                     ylabel("Range (m)","FontSize",font_size)
@@ -454,9 +456,8 @@ classdef Radar_Signal_Processor_revA < handle
                             obj.Radar.Range_Max_m)])
 %                     ylim([100,110])   
                     
-                    font_size = 16;
                     legend('off')
-                    set(gcf,'Position',[100 100 350 350])
+                    set(gcf,'Position',fig_position)
                     title("CA-CFAR Detections","FontSize",font_size)
                     xlabel("Velocity (m/s)","FontSize",font_size)
                     ylabel("Range (m)","FontSize",font_size)
@@ -488,12 +489,11 @@ classdef Radar_Signal_Processor_revA < handle
                             obj.Radar.Range_Max_m)])
 %                     ylim([100,110])
 
-                    font_size = 16;
                     h = colorbar;
-                    h.FontSize = font_size;
+                    h.FontSize = font_size_colorbar;
                     h.Label.String = "Power (dB)";
                     h_label = h.Label;
-                    set(gcf,'Position',[100 100 350 400])
+                    set(gcf,'Position',fig_position)
                     title("Range-Doppler Response","FontSize",font_size)
                     xlabel("velocity (m/s)","FontSize",font_size)
                     ylabel("Range (m)","FontSize",font_size)
@@ -523,9 +523,8 @@ classdef Radar_Signal_Processor_revA < handle
 %                     ylim([100,110])
 
                     cla;
-                    font_size = 16;
                     legend('off')
-                    set(gcf,'Position',[100 100 350 400])
+                    set(gcf,'Position',fig_position)
                     title("CA-CFAR Detections","FontSize",font_size)
                     xlabel("Velocity (m/s)","FontSize",font_size)
                     ylabel("Range (m)","FontSize",font_size)
