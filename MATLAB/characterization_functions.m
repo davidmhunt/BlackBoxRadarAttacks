@@ -1859,6 +1859,249 @@ classdef characterization_functions
             
             nearest_points = [closest_ranges, closest_velocities];
         end
+
+        %{
+            Purpose: For a set of range detections and velocity detections,
+            identify which detection is closest to the given point
+            
+            Inputs:
+                Range_detections: an N x M matrix of range detections where
+                    N is the number of frames and M is the number of
+                    detections for each frame. NaN values are automitacally
+                    filtered out.
+                Velocity_detections: an N x M matrix of velocity detections
+                max_range: the maximum range for the detection region in m
+                max_vel: the maximum absolute velocity for the detection
+                    region in m/s
+                max_num_points: the maximum number of points to detect
+        %}
+        function [valid_ranges,valid_velocities] = identify_detections_in_region(...
+                                        range_detections, ...
+                                        velocity_detections, ...
+                                        max_range, ...
+                                        max_vel, ...
+                                        max_num_points)
+            num_frames = size(range_detections,1);
+            valid_ranges = zeros(num_frames,max_num_points);
+            valid_velocities = zeros(num_frames,max_num_points);
+            
+            for i = 1:num_frames
+                ranges = range_detections(i,:)';
+                velocities = velocity_detections(i,:)';
+                
+                %remove NaN values
+                ranges = ranges(~isnan(ranges));
+                velocities = velocities(~isnan(ranges));
+                
+                if ~isempty(ranges)
+                    %identify the valid points
+                    valid_idxs = (ranges <= max_range) & (abs(velocities) <= max_vel);
+                    
+                    ranges = ranges(valid_idxs);
+                    velocities = velocities(valid_idxs);
+
+                    num_valid_points = min(max_num_points,sum(valid_idxs));
+
+                    valid_ranges(i,1:num_valid_points) = ranges(1:num_valid_points);
+                    valid_velocities(i,1:num_valid_points) = velocities(1:num_valid_points);
+                end
+            end
+        end
+
+        function print_attack_frame_detections( ...
+                                            ranges, ...
+                                            velocities, ...
+                                            attack_start_frame, ...
+                                            num_attack_frames)
+            %get the detections corresponding to the attack frame
+            attack_ranges = ranges( ...
+                attack_start_frame:attack_start_frame + num_attack_frames - 1, :);
+            attack_velocities = velocities( ...
+                attack_start_frame:attack_start_frame + num_attack_frames - 1, :);
+
+            %print the attack detections out
+            %print attack ranges
+            fprintf("Detected Ranges \n")
+            fmt = ['%f\t' repmat('%f\t',1,size(attack_ranges,2)-1) '\n'];
+            fprintf(fmt,attack_ranges.')
+            
+            %print attack velocities
+            fprintf("Detected Velocities \n");
+            fmt = ['%f\t' repmat('%f\t',1,size(attack_velocities,2)-1) '\n'];
+            fprintf(fmt,attack_velocities.')
+        end
+
+        function plot_detetections(ranges, range_limits, max_frame, save_to_file)
+
+            clf;
+            set(gcf,'Position',[100 100 400 400])
+            font_size = 15;
+            hold on;
+            for i = 1:size(ranges,2)
+                scatter(1:size(ranges,1),ranges(:,i),"o",'filled',"b");
+            end
+            hold off;
+            ylim(range_limits)
+            xlim([1,max_frame]);
+            ax = gca;
+            ax.FontSize = font_size;
+            title("Detected Object Location","FontSize",font_size)
+            xlabel("Frame","FontSize",font_size)
+            ylabel("Detected Range","FontSize",font_size)
+            if save_to_file
+                print('-r300',"generated_plots/detections",'-dsvg')
+                print('-r300',"generated_plots/detections",'-dpng')
+            end
+        end
+
+        function F_detections = generate_detection_movie(ranges, range_limits)
+            
+            num_frames = size(ranges,1);
+            
+            %declare an empty array to store the resulting frames
+            F_detections(num_frames) = struct('cdata',[],'colormap',[]);
+
+            %for each frame, plot the detections up to that point
+            for i = 1:num_frames
+                characterization_functions.plot_detetections(ranges(1:i,:),range_limits,num_frames, false);
+                drawnow;
+                F_detections(i) = getframe(gcf);
+            end
+            
+        end
+
+        function play_movie(F_movie,frame_rate)
+            fig = figure;
+            movie(fig,F_movie,1,frame_rate);
+        end
+
+        function save_movie_to_gif(F_movie,frame_rate,file_name)
+            for i = 1:length(F_movie)
+                [A,map] = rgb2ind(frame2im(F_movie(i)),256);
+                if i == 1
+                    imwrite(A,map,file_name,'gif','LoopCount',Inf,"DelayTime",1/frame_rate);
+                else
+                    imwrite(A,map,file_name,'gif','WriteMode','append','DelayTime',1/frame_rate);
+                end
+            end
+        end
+        
+        function [track_positions,track_IDs] = perform_object_tracking( ...
+                                    ranges, ...
+                                    velocities, ...
+                                    frame_period_ms, ...
+                                    max_num_tracks, ...
+                                    range_resolution, ...
+                                    velocity_resolution)
+
+            %obtain specific tracking parameters
+            max_num_detections = size(ranges,2);
+
+            confirmation_threshold = [1,3]; %track confirmed if 2 detections in last 4 updates
+            deletion_threshold = [2,10]; %track is deleted if it isn't assigned to any detections in 3 of 5 last updates
+
+            tracker = radarTracker( ...
+                "MaxNumTracks",max_num_tracks, ...
+                "MaxNumDetections",max_num_detections, ...
+                "ConfirmationThreshold",confirmation_threshold, ...
+                "DeletionThreshold",deletion_threshold);
+
+            %specify detection measurement parameters
+            MP2 = struct('RangeResolution',range_resolution, ...
+                'VelocityResolution',velocity_resolution, ...
+                "MeasurementNoise",diag([1e3,5,1]));
+
+            %initialize an array to track the position for each unique
+            %track
+            track_positions = cell(1,0);
+            track_IDs = [];
+
+            %specify tracker initialized as false (initialized once first
+            %detection occurs
+
+            for i = 1:size(ranges,1)
+
+                %get the detected ranges/velocities that are non  zero
+                valid_idxs = ranges(i,:) > 0;
+
+                %get the detected ranges from the frame
+                detected_ranges = ranges(i,valid_idxs);
+                detected_velocities = -1 * velocities(i,valid_idxs);
+
+                %format the detections into an objectDetection object
+                detection_time = frame_period_ms * 1e-3 * (i - 1);
+                
+                detections = cell(1,size(detected_ranges,2));
+
+                for j = 1:size(detected_ranges,2)
+                    %create a detection object for each detection
+                    detection = objectDetection( ...
+                        detection_time, ...
+                        [detected_ranges(j);detected_velocities(j);0], ...
+                        'MeasurementParameters',MP2);
+
+                    detections{j} = detection;
+                end
+
+                if ~isempty(detections) || isLocked(tracker)
+                    
+                    [confirmedTracks,~,allTracks] = tracker(detections,detection_time);
+
+                    if ~isempty(allTracks)
+                        positions = getTrackPositions(allTracks,"constvel");
+                        for k = 1:size(allTracks,2)
+                            track_ID = allTracks(k).TrackID;
+                            
+                            %for new track IDs
+                            if isempty(find(track_IDs==track_ID,1))
+                                
+                                %save the new track ID
+                                track_IDs = [track_IDs,track_ID];
+                                
+                                %prepare for a new set of track positions
+                                %to be saved in the cell array
+                                track_positions{size(track_positions,2) + 1} = [];
+                            end
+
+                            %save the [frame,position] for the track
+                            idx = find(track_IDs == track_ID,1);
+                            track_positions{idx} = ...
+                                [track_positions{idx};
+                                i,positions(k)];
+                        end
+                        
+                    end
+                end
+            end
+            
+        end
+
+        function plot_tracks(track_positions,track_IDs, range_limits, num_frames)
+            clf;
+            set(gcf,'Position',[100 100 400 400])
+            font_size = 15;
+            hold on;
+            for i = 1:size(track_positions,2)
+                series_name = sprintf("Track %d",track_IDs(i));
+                frames = track_positions{i}(:,1);
+                positions = track_positions{i}(:,2);
+                scatter(frames,positions,"DisplayName",series_name,"Marker","o","MarkerFaceColor","flat");
+            end
+            hold off;
+            ylim(range_limits)
+            xlim([1,num_frames]);
+            ax = gca;
+            ax.FontSize = font_size;
+            title("Tracked Object Locations","FontSize",font_size)
+            xlabel("Frame","FontSize",font_size)
+            ylabel("Detected Range","FontSize",font_size)
+%             legend('show')
+            print('-r300',"generated_plots/tracks",'-dsvg')
+            print('-r300',"generated_plots/tracks",'-dpng')
+        end
+
+
+
         
     end
 end

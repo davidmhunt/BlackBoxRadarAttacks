@@ -79,9 +79,8 @@ classdef Radar_Signal_Processor_revA < handle
         F_clusters = struct('cdata',[],'colormap',[])
         range_estimates
         velocity_estimates
-        tgt_range %so that the video can zoom in on where the target should be
-        tgt_velocity %so that the video can zoom in on where the target should be
-        num_bins_zoom %the number of bins (+/-) to zoom in on for the target region
+        tgt_range_lims %so that the video can zoom in on where the target should be
+        tgt_velocity_lims %so that the video can zoom in on where the target should be
 
     end
 
@@ -286,7 +285,7 @@ classdef Radar_Signal_Processor_revA < handle
         end
         
         function configure_movie_capture(obj,frames_to_capture,capture_movies, ...
-                tgt_rng,tgt_vel,num_bins_to_zoom)
+                range_lims,vel_lims)
             %{
                 Purpose: this function configures parameters to save each
                     frame's range-doppler,clustering,range-detections, and
@@ -298,15 +297,12 @@ classdef Radar_Signal_Processor_revA < handle
                         movies of the range doppler and clustering outputs
                     tgt_range: range of target so movie can zoom in on it
                     tgt_vel: velocity of target so movie can zoom in on it
-                    num_bins_to_zoom: the number of bins to use to zoom in
-                        on the target
             %}
             obj.F_rngdop(frames_to_capture) = struct('cdata',[],'colormap',[]);
             obj.F_clusters(frames_to_capture) = struct('cdata',[],'colormap',[]);
             obj.capture_movies = capture_movies;
-            obj.tgt_range = tgt_rng;
-            obj.tgt_velocity = tgt_vel;
-            obj.num_bins_zoom = num_bins_to_zoom;
+            obj.tgt_range_lims = range_lims;
+            obj.tgt_velocity_lims = vel_lims;
         end
         
         %% [3] Functions for processing the signals
@@ -390,6 +386,9 @@ classdef Radar_Signal_Processor_revA < handle
             detected_ranges = detected_ranges(valid_idxs);
             detections = detections(:,valid_idxs);
             
+            fig_position = [0,0,350,350];
+            font_size = 16;
+            font_size_colorbar = 12;
             
         
             %estimate the range and the velocities
@@ -410,26 +409,14 @@ classdef Radar_Signal_Processor_revA < handle
                     %zoom the range doppler plot
                 
                     clim([resp_max-30, resp_max]); %previously resp_max - 30
-                    xlim([max(obj.tgt_velocity - obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
-                        -1 * obj.Radar.V_Max_m_per_s), ...
-                        min(obj.tgt_velocity + obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
-                        obj.Radar.V_Max_m_per_s)])
-                    ylim([max(obj.tgt_range - (obj.Radar.current_frame * obj.Radar.FramePeriodicity_ms * 1e-3...
-                            * obj.tgt_velocity)...
-                            - obj.num_bins_zoom * obj.Radar.Range_Res_m,...
-                            0), ...
-                        min(obj.tgt_range - (obj.Radar.current_frame * obj.Radar.FramePeriodicity_ms * 1e-3...
-                            * obj.tgt_velocity)...
-                            + obj.num_bins_zoom * obj.Radar.Range_Res_m,...
-                            obj.Radar.Range_Max_m)])
-%                     ylim([100,110])
+                    xlim(obj.tgt_velocity_lims)
+                    ylim(obj.tgt_range_lims)
 
-                    font_size = 16;
                     h = colorbar;
-                    h.FontSize = font_size;
+                    h.FontSize = font_size_colorbar;
                     h.Label.String = "Power (dB)";
                     h_label = h.Label;
-                    set(gcf,'Position',[100 100 350 350])
+                    set(gcf,'Position',fig_position)
                     title("Range-Doppler Response","FontSize",font_size)
                     xlabel("Velocity (m/s)","FontSize",font_size)
                     ylabel("Range (m)","FontSize",font_size)
@@ -440,23 +427,11 @@ classdef Radar_Signal_Processor_revA < handle
     
                     %plot the clusters
                     gscatter(detected_velocities,detected_ranges,idx);
-                    xlim([max(obj.tgt_velocity - obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
-                        -1 * obj.Radar.V_Max_m_per_s), ...
-                        min(obj.tgt_velocity + obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
-                        obj.Radar.V_Max_m_per_s)])
-                    ylim([max(obj.tgt_range - (obj.Radar.current_frame * obj.Radar.FramePeriodicity_ms * 1e-3...
-                            * obj.tgt_velocity)...
-                            - obj.num_bins_zoom * obj.Radar.Range_Res_m,...
-                            0), ...
-                        min(obj.tgt_range - (obj.Radar.current_frame * obj.Radar.FramePeriodicity_ms * 1e-3...
-                            * obj.tgt_velocity)...
-                            + obj.num_bins_zoom * obj.Radar.Range_Res_m,...
-                            obj.Radar.Range_Max_m)])
-%                     ylim([100,110])   
+                    xlim(obj.tgt_velocity_lims)
+                    ylim(obj.tgt_range_lims) 
                     
-                    font_size = 16;
                     legend('off')
-                    set(gcf,'Position',[100 100 350 350])
+                    set(gcf,'Position',fig_position)
                     title("CA-CFAR Detections","FontSize",font_size)
                     xlabel("Velocity (m/s)","FontSize",font_size)
                     ylabel("Range (m)","FontSize",font_size)
@@ -474,26 +449,14 @@ classdef Radar_Signal_Processor_revA < handle
                     plotResponse(obj.RangeDopplerResponse,obj.radar_cube);
                     
                     clim([resp_max-30, resp_max]);
-                    xlim([max(obj.tgt_velocity - obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
-                        -1 * obj.Radar.V_Max_m_per_s), ...
-                        min(obj.tgt_velocity + obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
-                        obj.Radar.V_Max_m_per_s)])
-                    ylim([max(obj.tgt_range - (obj.Radar.current_frame * obj.Radar.FramePeriodicity_ms * 1e-3...
-                            * obj.tgt_velocity)...
-                            - obj.num_bins_zoom * obj.Radar.Range_Res_m,...
-                            0), ...
-                        min(obj.tgt_range - (obj.Radar.current_frame * obj.Radar.FramePeriodicity_ms * 1e-3...
-                            * obj.tgt_velocity)...
-                            + obj.num_bins_zoom * obj.Radar.Range_Res_m,...
-                            obj.Radar.Range_Max_m)])
-%                     ylim([100,110])
+                    xlim(obj.tgt_velocity_lims)
+                    ylim(obj.tgt_range_lims)
 
-                    font_size = 16;
                     h = colorbar;
-                    h.FontSize = font_size;
+                    h.FontSize = font_size_colorbar;
                     h.Label.String = "Power (dB)";
                     h_label = h.Label;
-                    set(gcf,'Position',[100 100 350 400])
+                    set(gcf,'Position',fig_position)
                     title("Range-Doppler Response","FontSize",font_size)
                     xlabel("velocity (m/s)","FontSize",font_size)
                     ylabel("Range (m)","FontSize",font_size)
@@ -508,24 +471,12 @@ classdef Radar_Signal_Processor_revA < handle
                     detected_ranges = [0];
                     idx = [1];
                     gscatter(detected_velocities,detected_ranges,idx);
-                    xlim([max(obj.tgt_velocity - obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
-                        -1 * obj.Radar.V_Max_m_per_s), ...
-                        min(obj.tgt_velocity + obj.num_bins_zoom * obj.Radar.V_Res_m_per_s, ...
-                        obj.Radar.V_Max_m_per_s)])
-                    ylim([max(obj.tgt_range - (obj.Radar.current_frame * obj.Radar.FramePeriodicity_ms * 1e-3...
-                            * obj.tgt_velocity)...
-                            - obj.num_bins_zoom * obj.Radar.Range_Res_m,...
-                            0), ...
-                        min(obj.tgt_range - (obj.Radar.current_frame * obj.Radar.FramePeriodicity_ms * 1e-3...
-                            * obj.tgt_velocity)...
-                            + obj.num_bins_zoom * obj.Radar.Range_Res_m,...
-                            obj.Radar.Range_Max_m)])
-%                     ylim([100,110])
+                    xlim(obj.tgt_velocity_lims)
+                    ylim(obj.tgt_range_lims)
 
                     cla;
-                    font_size = 16;
                     legend('off')
-                    set(gcf,'Position',[100 100 350 400])
+                    set(gcf,'Position',fig_position)
                     title("CA-CFAR Detections","FontSize",font_size)
                     xlabel("Velocity (m/s)","FontSize",font_size)
                     ylabel("Range (m)","FontSize",font_size)
