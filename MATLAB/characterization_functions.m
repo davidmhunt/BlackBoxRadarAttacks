@@ -1813,8 +1813,12 @@ classdef characterization_functions
             
             %specify whether or not to record a move of the range-doppler plot
             record_movie = false;
+            range_lims = [simulator.Victim.Radar_Signal_Processor.distance_detection_range(1) - 5,150];
+            vel_lims = [-20,20];
+            vel_exclusion_region = [-1,1];
+            frame_period_ms = 500;
             simulator.Victim.Radar_Signal_Processor.configure_movie_capture(num_frames, ...
-                record_movie,spoof_range,-1 * spoof_velocity,50);%previously used 30
+                record_movie,range_lims,vel_lims,vel_exclusion_region);
             
             for frame = int32(1:num_frames)
     
