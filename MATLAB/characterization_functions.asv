@@ -82,14 +82,10 @@ classdef characterization_functions
             %initialize victim and simulation parameters
         
             
-            %specify whether or not to record a move of the range-doppler plot
+            %specify whether or not to record a movie of the range-doppler plot
             record_movie = false;
-            range_lims = [simulator.Victim.Radar_Signal_Processor.distance_detection_range(1) - 5,150];
-            vel_lims = [-50,50];
-            vel_exclusion_region = [-1,1];
-            frame_period_ms = simulator.Victim.FramePeriodicity_ms;
             simulator.Victim.Radar_Signal_Processor.configure_movie_capture(frames_to_compute, ...
-                record_movie,range_lims,vel_lims,vel_exclusion_region);
+                record_movie,50,15,40);
             
             %pre-compute the victim's chirps
             simulator.Victim.precompute_radar_chirps();
@@ -893,10 +889,10 @@ classdef characterization_functions
             %specify whether or not to record a move of the range-doppler plot
             record_movie = false;
             range_lims = [simulator.Victim.Radar_Signal_Processor.distance_detection_range(1) - 5,150];
-            vel_lims = [-50,50];
+            vel_lims = [-20,20];
             vel_exclusion_region = [-1,1];
             frame_period_ms = simulator.Victim.FramePeriodicity_ms;
-            simulator.Victim.Radar_Signal_Processor.configure_movie_capture(frames_to_compute, ...
+            simulator.Victim.Radar_Signal_Processor.configure_movie_capture(num_frames, ...
                 record_movie,range_lims,vel_lims,vel_exclusion_region);
             
             %pre-compute the victim's chirps
@@ -1307,7 +1303,7 @@ classdef characterization_functions
             vel_lims = [-20,20];
             vel_exclusion_region = [-1,1];
             frame_period_ms = 500;
-            simulator.Victim.Radar_Signal_Processor.configure_movie_capture(frames_to_compute, ...
+            simulator.Victim.Radar_Signal_Processor.configure_movie_capture(num_frames, ...
                 record_movie,range_lims,vel_lims,vel_exclusion_region);
             
             %pre-compute the victim's chirps
