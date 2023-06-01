@@ -374,12 +374,12 @@ classdef Subsystem_attacking  < handle
         function scaling_val = compute_power_scaling(obj)
             if contains(obj.attack_mode,"target")
                 if obj.desired_range_m < obj.Attacker.current_target_pos
-                    scaling_val = 1.0;
+                    scaling_val = 1.0 * 1e-2;
                     return;
                 else
-                    loss_attacker = 1 / (4 * pi * obj.Attacker.current_target_pos);
-                    loss_spoofing = 1/ (4 * pi * obj.desired_range_m);
-                    scaling_val = loss_spoofing / loss_attacker;
+                    loss_attacker = 1 / (4 * pi * obj.Attacker.current_target_pos^(2));
+                    loss_spoofing = 1/ (4 * pi * obj.desired_range_m^(2));
+                    scaling_val = loss_spoofing / loss_attacker * 1e-2;
                     return;
                 end
             else 

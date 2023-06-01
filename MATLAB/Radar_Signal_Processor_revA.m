@@ -81,6 +81,7 @@ classdef Radar_Signal_Processor_revA < handle
         velocity_estimates
         tgt_range_lims %so that the video can zoom in on where the target should be
         tgt_velocity_lims %so that the video can zoom in on where the target should be
+        tgt_vel_exclusion_region %to remove undesired detections from the visualization
 
     end
 
@@ -223,8 +224,11 @@ classdef Radar_Signal_Processor_revA < handle
             
             %calculate training region size
             %previously used .05 * num samples and num chirps
-            range_training_size = min(2,ceil(obj.Radar.ADC_Samples * 0.05)); %use 8,0.05 for higher BW
-            velocity_training_size = max(3,ceil(obj.Radar.NumChirps * 0.0005)); % use 3,0.05 for higher BW
+%             range_training_size = min(2,ceil(obj.Radar.ADC_Samples * 0.05)); %use 8,0.05 for higher BW
+%             velocity_training_size = max(3,ceil(obj.Radar.NumChirps * 0.0005)); % use 3,0.05 for higher BW'
+
+            range_training_size = 2;
+            velocity_training_size = 2;
             
             %put guard and training region sizes into arrays for the CFAR detector
             obj.guard_region = [2,3]; %previously [2,1]
@@ -285,7 +289,7 @@ classdef Radar_Signal_Processor_revA < handle
         end
         
         function configure_movie_capture(obj,frames_to_capture,capture_movies, ...
-                range_lims,vel_lims)
+                range_lims,vel_lims, vel_exclusion_region)
             %{
                 Purpose: this function configures parameters to save each
                     frame's range-doppler,clustering,range-detections, and
@@ -303,6 +307,7 @@ classdef Radar_Signal_Processor_revA < handle
             obj.capture_movies = capture_movies;
             obj.tgt_range_lims = range_lims;
             obj.tgt_velocity_lims = vel_lims;
+            obj.tgt_vel_exclusion_region = vel_exclusion_region;
         end
         
         %% [3] Functions for processing the signals
@@ -381,14 +386,16 @@ classdef Radar_Signal_Processor_revA < handle
             
             %filtering out non-zero velocity components
             %identify non-zero velocity objects
-            valid_idxs = abs(detected_velocities) > 2;
+            valid_idxs = (detected_velocities < obj.tgt_vel_exclusion_region(1)) ...
+                        | (detected_velocities > obj.tgt_vel_exclusion_region(2));
             detected_velocities = detected_velocities(valid_idxs);
             detected_ranges = detected_ranges(valid_idxs);
             detections = detections(:,valid_idxs);
             
             fig_position = [0,0,350,350];
-            font_size = 16;
+            font_size = 15;
             font_size_colorbar = 12;
+            color_lower_lim = 40;
             
         
             %estimate the range and the velocities
@@ -408,7 +415,7 @@ classdef Radar_Signal_Processor_revA < handle
                     
                     %zoom the range doppler plot
                 
-                    clim([resp_max-30, resp_max]); %previously resp_max - 30
+                    clim([resp_max-color_lower_lim, resp_max]); %previously resp_max - 30
                     xlim(obj.tgt_velocity_lims)
                     ylim(obj.tgt_range_lims)
 
@@ -422,6 +429,7 @@ classdef Radar_Signal_Processor_revA < handle
                     ylabel("Range (m)","FontSize",font_size)
                     ax = gca;
                     ax.FontSize = font_size;
+                    ax.LineWidth = 2.0;
                     drawnow
                     obj.F_rngdop(obj.Radar.current_frame) = getframe(gcf);
     
@@ -437,6 +445,7 @@ classdef Radar_Signal_Processor_revA < handle
                     ylabel("Range (m)","FontSize",font_size)
                     ax = gca;
                     ax.FontSize = font_size;
+                    ax.LineWidth = 2.0;
                     drawnow
                     obj.F_clusters(obj.Radar.current_frame) = getframe(gcf);
                 end
@@ -448,7 +457,7 @@ classdef Radar_Signal_Processor_revA < handle
                     %plot range doppler
                     plotResponse(obj.RangeDopplerResponse,obj.radar_cube);
                     
-                    clim([resp_max-30, resp_max]);
+                    clim([resp_max-color_lower_lim, resp_max]);
                     xlim(obj.tgt_velocity_lims)
                     ylim(obj.tgt_range_lims)
 
@@ -462,6 +471,7 @@ classdef Radar_Signal_Processor_revA < handle
                     ylabel("Range (m)","FontSize",font_size)
                     ax = gca;
                     ax.FontSize = font_size;
+                    ax.LineWidth = 2.0;
                     drawnow
                     obj.F_rngdop(obj.Radar.current_frame) = getframe(gcf);
     
@@ -482,6 +492,7 @@ classdef Radar_Signal_Processor_revA < handle
                     ylabel("Range (m)","FontSize",font_size)
                     ax = gca;
                     ax.FontSize = font_size;
+                    ax.LineWidth = 2.0;
                     drawnow;
                     obj.F_clusters(obj.Radar.current_frame) = getframe(gcf);
                 end

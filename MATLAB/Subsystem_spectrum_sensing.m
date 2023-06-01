@@ -91,12 +91,12 @@ classdef Subsystem_spectrum_sensing < handle
             obj.FMCW_sample_rate_Msps = FMCW_sample_rate_Msps;
 
             %initialize rx_buffers for energy detection
-            obj.configure_rx_buffers(obj.FMCW_sample_rate_Msps,10); %specify 5ms of capture for noise computation
+            obj.configure_rx_buffers(obj.FMCW_sample_rate_Msps,5); %10 ms for USRP, 5ms for sim
             obj.state = "Measuring Noise"; 
 
             %initialize the remaining parameters
             obj.initialize_detection_params();
-            obj.initialize_timing_params(200); %specify 20 ms of processing delay
+            obj.initialize_timing_params(20); %specify 20 ms of processing delay for sim, 200 for USRP
             obj.initialize_spectogram_params(FMCW_sample_rate_Msps);
             obj.initialize_chirp_and_frame_tracking();
             obj.initialize_plot_params(FMCW_sample_rate_Msps);
@@ -199,7 +199,7 @@ classdef Subsystem_spectrum_sensing < handle
             if obj.FMCW_sample_rate_Msps > 500
                 obj.spectogram_params.freq_sampling_period_us = 0.5;
             else
-                obj.spectogram_params.freq_sampling_period_us = 15; %previously 2us
+                obj.spectogram_params.freq_sampling_period_us = 2; %previously 2us for sim, 15us for USRP
             end 
             obj.spectogram_params.num_samples_per_sampling_window = ...
                 ceil(obj.spectogram_params.freq_sampling_period_us * FMCW_sample_rate_Msps);
@@ -1321,13 +1321,14 @@ classdef Subsystem_spectrum_sensing < handle
             clim([resp_max-30, resp_max]);
             ylim([0,max(obj.plot_params.frequencies)])
             xlim([0,max(obj.plot_params.times(idx_to_plot))])
-            font_size = 14;
+            font_size = 16;
             colorbar(gca,"FontSize",font_size)
             colorbar(gca,"Visible","off")
             legend('off')
-            set(gcf,'Position',[100 100 400 400])
+            set(gcf,'Position',[0 0 450 350])
             ax = gca;
             ax.FontSize = font_size;
+            ax.LineWidth = 2.0;
             title_str = sprintf('Spectogram');
             title(title_str,"FontSize",font_size);
             xlabel('Time(us)',"FontSize",font_size)
@@ -1345,12 +1346,13 @@ classdef Subsystem_spectrum_sensing < handle
             gscatter(obj.detected_times(idx_to_plot), ...
                 obj.detected_frequencies(idx_to_plot), ...
                 obj.idx(idx_to_plot));
-            font_size = 14;
+            font_size = 16;
 %             colorbar(gca,"FontSize",font_size)
             legend('off')
-            set(gcf,'Position',[100 100 400 400])
+            set(gcf,'Position',[0 0 450 350])
             ax = gca;
             ax.FontSize = font_size;
+            ax.LineWidth = 2.0;
             title_str = sprintf('Identified Chirps');
             title(title_str,"FontSize",font_size);
             xlabel('Time(us)',"FontSize",font_size)

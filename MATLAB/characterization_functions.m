@@ -235,10 +235,11 @@ classdef characterization_functions
             ranges_m = table_data_results{:,1};
             velocities_m_s = table_data_results{:,2};
             figure;
-            font_size = 14;
+            font_size = 17;
             set(gcf,'Position',[100 100 400 400])
             ax = gca;
             ax.FontSize = font_size;
+            ax.LineWidth = 2.0;
             scatter(velocities_m_s, ranges_m);
             ylabel("Spoofing Range (m)","FontSize",font_size)
             xlabel("Spoofing Velocity (m/s)","FontSize",font_size)
@@ -259,7 +260,7 @@ classdef characterization_functions
             ranges_m = table_data_results{:,1};
             velocities_m_s = table_data_results{:,2};
             figure;
-            font_size = 14;
+            font_size = 17;
             set(gcf,'Position',[100 100 800 400])
             ax = gca;
             ax.FontSize = font_size;
@@ -268,7 +269,8 @@ classdef characterization_functions
             [h,stats] = cdfplot(ranges_m);
             ax = gca;
             ax.FontSize = font_size;
-            h.LineWidth = 2.0;
+            ax.LineWidth = 2.0;
+            h.LineWidth = 4.0;
             xlabel("Spoofing Range (m)","FontSize",font_size)
             title("CDF of Test Spoofing Ranges","FontSize",font_size)
 
@@ -277,7 +279,8 @@ classdef characterization_functions
             [h,stats] = cdfplot(velocities_m_s);
             ax = gca;
             ax.FontSize = font_size;
-            h.LineWidth = 2.0;
+            ax.LineWidth = 2.0;
+            h.LineWidth = 4.0;
             xlabel("Spoofing Velocity (m/s)","FontSize",font_size)
             title("CDF of Test Spoofing Velocities","FontSize",font_size)
             saveas(gcf, "generated_plots/spoofing_test_configuration_cdfs.png")
@@ -352,6 +355,8 @@ classdef characterization_functions
                 percentile - the percentile to compute for the tail
                 scale_factor - scale the error by a specified factor
                 (used to change unit scales)
+                override_current_figure - on true, over-rides current
+                    figure, on false, adds plot to the current figure
         %}
         function summary_table = generate_testing_summary_absolute_error(...
                 read_file_path,...
@@ -361,7 +366,8 @@ classdef characterization_functions
                 metric_title, ...
                 metric_units, ...
                 percentile,...
-                scale_factor)
+                scale_factor, ...
+                override_current_figure)
             
             %plot the cdf of the chirp slope errors
             table_data_results = readtable(read_file_path);
@@ -383,19 +389,35 @@ classdef characterization_functions
             variance_error = var(abs_errors);
             MSE_error = mse(actual_values,estimated_values);
             tail = prctile(abs_errors,percentile);
-
-            figure;
-            font_size = 14;
-            set(gcf,'Position',[100 100 400 400])
-            [h,stats] = cdfplot(abs_errors);
-            h.LineWidth = 2.0;
-            xlabel(metric_title + " " + metric_units,"FontSize",font_size);
-            title({"CDF of Absolute " ; metric_title + " Error"},"FontSize",font_size);
-            ax = gca;
-            ax.FontSize = font_size;
+            
+            %override current figure if desired
+            font_size = 17;
+            if override_current_figure
+                clf;
+                figure;
+                set(gcf,'Position',[100 100 400 400])
+                [h,stats] = cdfplot(abs_errors);
+            else
+                gcf;
+                hold on;
+                [h,stats] = cdfplot(abs_errors);
+                h.LineWidth = 4.0;
+                hold off;
+                %add the legend - assuming this is the USRP results
+                legend(["Sim","USRP"],"Location","southeast")
+            end
+            
+            %finish plotting
+            h.LineWidth = 4.0;
+            xlabel(metric_title + " (" + metric_units +")" ,"FontSize",font_size - 2);
+            title({"CDF of Absolute "; metric_title + " Error"},"FontSize",font_size);
             if max(abs_errors) > 5 * tail
                 xlim([0,2 * tail])
             end
+            ax = gca;
+            ax.LineWidth = 2.0;
+            ax.FontSize = font_size;
+            
             
             variable_names = [...
                 "Mean (" + metric_units + ")",...
@@ -441,6 +463,8 @@ classdef characterization_functions
                 percentile - the percentile to compute for the tail
                 scale_factor - scale the error by a specified factor
                 (used to change unit scales)
+                override_current_figure - on true, over-rides current
+                    figure, on false, adds plot to the current figure
         %}
         function summary_table = generate_testing_summary_relative_error(...
                 read_file_path,...
@@ -450,7 +474,8 @@ classdef characterization_functions
                 metric_title, ...
                 metric_units, ...
                 percentile,...
-                scale_factor)
+                scale_factor, ...
+                override_current_figure)
             
             %plot the cdf of the chirp slope errors
             table_data_results = readtable(read_file_path);
@@ -474,18 +499,34 @@ classdef characterization_functions
             MSE_error = mse(actual_values,estimated_values);
             tail = prctile(relative_errors,percentile);
 
-            figure;
-            font_size = 14;
-            set(gcf,'Position',[100 100 400 400])
-            [h,stats] = cdfplot(relative_errors);
-            h.LineWidth = 2.0;
-            xlabel("Relative Error (Percent " + metric_units + ")" ,"FontSize",font_size);
-            title("CDF of Relative " + metric_title + " Error","FontSize",font_size);
-            ax = gca;
-            ax.FontSize = font_size;
+            %override current figure if desired
+            font_size = 17;
+            if override_current_figure
+                clf;
+                figure;
+                set(gcf,'Position',[100 100 400 450])
+                [h,stats] = cdfplot(relative_errors);
+            else
+                gcf;
+                hold on;
+                [h,stats] = cdfplot(relative_errors);
+                h.LineWidth = 4.0;
+                hold off;
+                %add the legend - assuming these are the USRP results
+                legend(["Sim","USRP"],"Location","southeast")
+            end
+            
+            %finish plotting
+            h.LineWidth = 4.0;
+            xlabel({"Relative Error";"(Percent " + metric_units + ")"} ,"FontSize",font_size - 2);
+            title({"CDF of Relative "; metric_title + " Error"},"FontSize",font_size);
             if max(relative_errors) > 5 * tail
                 xlim([0,2 * tail])
             end
+            ax = gca;
+            ax.LineWidth = 2.0;
+            ax.FontSize = font_size;
+            
             
             variable_names = [...
                 "Mean (" + metric_units + ")",...
@@ -655,18 +696,15 @@ classdef characterization_functions
             slopes_MHz_us = table_data_results{:,1};
             chirp_cycle_times_MHz_us = table_data_results{:,2};
             figure;
-            font_size = 14;
-%             h = colorbar;
-%             h.FontSize = font_size;
-%             h.Label.String = "Power (dB)";
-%             h_label = h.Label;
+            font_size = 17;
             set(gcf,'Position',[100 100 400 400])
-            ax = gca;
-            ax.FontSize = font_size;
             scatter(chirp_cycle_times_MHz_us, slopes_MHz_us);
             ylabel("Chirp Slope (MHz/us)","FontSize",font_size)
             xlabel("Chirp Cycle Time (us)","FontSize",font_size)
             title("Victim Configurations to Test","FontSize",font_size)
+            ax = gca;
+            ax.FontSize = font_size;
+            ax.LineWidth = 2.0;
             saveas(gcf, "generated_plots/victim_test_configurations.png")
         end
 
@@ -682,14 +720,15 @@ classdef characterization_functions
             slopes_MHz_us = table_data_results{:,1};
             chirp_cycle_times_MHz_us = table_data_results{:,2};
             figure;
-            font_size = 14;
+            font_size = 17;
             set(gcf,'Position',[100 100 800 400])
             %plot cdf for slopes
             subplot(1,2,1);
             [h,stats] = cdfplot(slopes_MHz_us);
             ax = gca;
             ax.FontSize = font_size;
-            h.LineWidth = 2.0;
+            ax.LineWidth = 2.0;
+            h.LineWidth = 4.0;
             xlabel("Chirp Slope (MHz/us)","FontSize",font_size)
             title("CDF of Test Slopes", "FontSize",font_size)
 
@@ -698,7 +737,8 @@ classdef characterization_functions
             [h,stats] = cdfplot(chirp_cycle_times_MHz_us);
             ax = gca;
             ax.FontSize = font_size;
-            h.LineWidth = 2.0;
+            ax.LineWidth = 2.0;
+            h.LineWidth = 4.0;
             xlabel("Chirp Cycle Time (us)","FontSize",font_size)
             title("CDF of Test Chirp Cycle Times","FontSize",font_size)
             saveas(gcf, "generated_plots/victim_test_configuration_cdfs.png")
@@ -744,12 +784,14 @@ classdef characterization_functions
             errorbar(mean_absolute_errors,error_bars,"LineWidth",2.0);
             ax = gca;
             ax.FontSize = font_size;
+            ax.LineWidth = 2.0;
             title("Frame Prediction Error","FontSize",font_size)
-            xlabel("Number of Frames Sensed","FontSize",font_size)
-            ylabel("error (us)","FontSize",font_size)
+            xlabel({"Number of Frames"; "Sensed"},"FontSize",font_size)
+            ylabel("Error (us)","FontSize",font_size)
             y_lim = 5 *max(mean_absolute_errors);
             ylim([0, y_lim])
             xlim([0,size(prediction_errors,2)+ 1])
+            
             if  use_log_scale
                 set(gca, 'YScale','log');
             end
@@ -764,6 +806,7 @@ classdef characterization_functions
             if use_log_scale
                 set(gca, 'YScale','log');
             end
+            grid on;
 
             saveas(gcf, "generated_plots/predicted_start_time_errors.png")
             
@@ -1878,8 +1921,9 @@ classdef characterization_functions
         function [valid_ranges,valid_velocities] = identify_detections_in_region(...
                                         range_detections, ...
                                         velocity_detections, ...
-                                        max_range, ...
-                                        max_vel, ...
+                                        range_region, ...
+                                        max_vel,...
+                                        vel_exclusion_region, ...
                                         max_num_points)
             num_frames = size(range_detections,1);
             valid_ranges = zeros(num_frames,max_num_points);
@@ -1895,7 +1939,9 @@ classdef characterization_functions
                 
                 if ~isempty(ranges)
                     %identify the valid points
-                    valid_idxs = (ranges <= max_range) & (abs(velocities) <= max_vel);
+                    valid_idxs = (ranges >= range_region(1) & ranges <= range_region(2))...
+                            & (velocities <= vel_exclusion_region(1) | velocities >= vel_exclusion_region(2))...
+                            & abs(velocities) <= max_vel;
                     
                     ranges = ranges(valid_idxs);
                     velocities = velocities(valid_idxs);
@@ -1934,8 +1980,8 @@ classdef characterization_functions
         function plot_detetections(ranges, range_limits, max_frame, save_to_file)
 
             clf;
-            set(gcf,'Position',[100 100 400 400])
-            font_size = 15;
+            set(gcf,'Position',[0 0 350 350])
+            font_size = 16;
             hold on;
             for i = 1:size(ranges,2)
                 scatter(1:size(ranges,1),ranges(:,i),"o",'filled',"b");
@@ -1944,10 +1990,10 @@ classdef characterization_functions
             ylim(range_limits)
             xlim([1,max_frame]);
             ax = gca;
-            ax.FontSize = font_size;
-            title("Detected Object Location","FontSize",font_size)
+            title({"Detected Object" ; "Location"},"FontSize",font_size)
             xlabel("Frame","FontSize",font_size)
             ylabel("Detected Range","FontSize",font_size)
+            ax.FontSize = font_size;
             if save_to_file
                 print('-r300',"generated_plots/detections",'-dsvg')
                 print('-r300',"generated_plots/detections",'-dpng')
