@@ -1997,7 +1997,7 @@ classdef characterization_functions
 
             clf;
             set(gcf,'Position',[0 0 350 350])
-            font_size = 16;
+            font_size = 17;
             hold on;
             for i = 1:size(ranges,2)
                 scatter(1:size(ranges,1),ranges(:,i),"o",'filled',"b");
@@ -2010,6 +2010,7 @@ classdef characterization_functions
             xlabel("Frame","FontSize",font_size)
             ylabel("Detected Range","FontSize",font_size)
             ax.FontSize = font_size;
+            ax.LineWidth = 2.0;
             if save_to_file
                 print('-r300',"generated_plots/detections",'-dsvg')
                 print('-r300',"generated_plots/detections",'-dpng')
