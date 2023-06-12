@@ -86,7 +86,7 @@ classdef characterization_functions
             record_movie = false;
             range_lims = [simulator.Victim.Radar_Signal_Processor.distance_detection_range(1) - 5,150];
             vel_lims = [-50,50];
-            vel_exclusion_region = [-1,1];
+            vel_exclusion_region = [-0.1,0.1];
             frame_period_ms = simulator.Victim.FramePeriodicity_ms;
             enable_simplified_plots = false;
             simulator.Victim.Radar_Signal_Processor.configure_movie_capture(frames_to_compute, ...
@@ -125,13 +125,26 @@ classdef characterization_functions
             final_attack_frame = simulator.Attacker.Subsystem_attacking.frame;
             num_attack_frames = frames_to_compute - attack_start_frame + 1;
 
-            %get the estimated range and velocity values from the Victim
-            end_idx = frames_to_compute;
-            start_idx = attack_start_frame;
-
-            estimated_ranges = simulator.Victim.Radar_Signal_Processor.range_estimates(start_idx:end_idx,1);
-            estimated_velocities = simulator.Victim.Radar_Signal_Processor.velocity_estimates(start_idx:end_idx,1);
+            %get the estimated ranges and velocities
+            range_detections = simulator.Victim.Radar_Signal_Processor.range_estimates;
+            velocity_detections = simulator.Victim.Radar_Signal_Processor.velocity_estimates;
             
+            %identify the point in the detections that is closest to desired target
+            %location
+            
+            
+            point = [spoof_range, spoof_velocity];
+            
+            closest_points = characterization_functions.identify_nearest_detections( ...
+                range_detections,velocity_detections, ...
+                point);
+            %get the detections corresponding to the attack only
+            attack_detections = closest_points( ...
+                attack_start_frame:attack_start_frame + num_attack_frames - 1, :);
+            
+            estimated_ranges = attack_detections(:,1);
+            estimated_velocities = attack_detections(:,2);
+       
             if anynan(estimated_ranges)
                 stop = true;
             end
