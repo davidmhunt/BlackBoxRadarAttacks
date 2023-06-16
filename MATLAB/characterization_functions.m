@@ -290,7 +290,7 @@ classdef characterization_functions
             ax.LineWidth = 2.0;
             h.LineWidth = 4.0;
             xlabel("Spoofing Range (m)","FontSize",font_size)
-            title("CDF of Test Spoofing Ranges","FontSize",font_size)
+            title({"CDF of Spoofing "; " Ranges"},"FontSize",font_size)
 
             %plot cdf for chirp cycle times
             subplot(1,2,2);
@@ -300,7 +300,7 @@ classdef characterization_functions
             ax.LineWidth = 2.0;
             h.LineWidth = 4.0;
             xlabel("Spoofing Velocity (m/s)","FontSize",font_size)
-            title("CDF of Test Spoofing Velocities","FontSize",font_size)
+            title({"CDF of Test Spoofing";" Velocities"},"FontSize",font_size)
             saveas(gcf, "generated_plots/spoofing_test_configuration_cdfs.png")
         end
 
@@ -420,6 +420,7 @@ classdef characterization_functions
                 hold on;
                 [h,stats] = cdfplot(abs_errors);
                 h.LineWidth = 4.0;
+                h.LineStyle = ":";
                 hold off;
                 %add the legend - assuming this is the USRP results
                 legend(["Sim","USRP"],"Location","southeast")
@@ -428,9 +429,10 @@ classdef characterization_functions
             %finish plotting
             h.LineWidth = 4.0;
             xlabel(metric_title + " (" + metric_units +")" ,"FontSize",font_size - 2);
+            ylabel("CDF","FontSize",font_size - 2);
             title({"CDF of Absolute "; metric_title + " Error"},"FontSize",font_size);
             if max(abs_errors) > 5 * tail
-                xlim([0,2 * tail])
+                xlim([0,4 * tail])
             end
             ax = gca;
             ax.LineWidth = 2.0;
@@ -529,6 +531,7 @@ classdef characterization_functions
                 hold on;
                 [h,stats] = cdfplot(relative_errors);
                 h.LineWidth = 4.0;
+                h.LineStyle = "--";
                 hold off;
                 %add the legend - assuming these are the USRP results
                 legend(["Sim","USRP"],"Location","southeast")
@@ -537,6 +540,7 @@ classdef characterization_functions
             %finish plotting
             h.LineWidth = 4.0;
             xlabel({"Relative Error";"(Percent " + metric_units + ")"} ,"FontSize",font_size - 2);
+            ylabel("CDF","FontSize",font_size - 2);
             title({"CDF of Relative "; metric_title + " Error"},"FontSize",font_size);
             if max(relative_errors) > 5 * tail
                 xlim([0,2 * tail])
@@ -748,6 +752,7 @@ classdef characterization_functions
             ax.LineWidth = 2.0;
             h.LineWidth = 4.0;
             xlabel("Chirp Slope (MHz/us)","FontSize",font_size)
+            ylabel("CDF",FontSize=font_size)
             title("CDF of Test Slopes", "FontSize",font_size)
 
             %plot cdf for chirp cycle times
@@ -758,6 +763,7 @@ classdef characterization_functions
             ax.LineWidth = 2.0;
             h.LineWidth = 4.0;
             xlabel("Chirp Cycle Time (us)","FontSize",font_size)
+            ylabel("CDF",FontSize=font_size)
             title("CDF of Test Chirp Cycle Times","FontSize",font_size)
             saveas(gcf, "generated_plots/victim_test_configuration_cdfs.png")
         end

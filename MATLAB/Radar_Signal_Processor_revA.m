@@ -379,7 +379,7 @@ classdef Radar_Signal_Processor_revA < handle
 
             %range-doppler response
             [resp, rnggrid,dopgrid] = obj.RangeDopplerResponse(obj.radar_cube);
-            resp_max =  10*log10(abs(max(resp,[],"all")));
+            resp_max =  10*log10(abs(max(resp,[],"all").^(2)));
         
             %CA CFAR 2-D
             detections = obj.CFARDetector2D(abs(resp).^2,obj.CUT_indicies);
@@ -394,19 +394,20 @@ classdef Radar_Signal_Processor_revA < handle
             detected_ranges = detected_ranges(valid_idxs);
             detections = detections(:,valid_idxs);
             
-            fig_position = [0,0,400,350];
+            fig_position = [0,0,440,350];
             font_size = 18;
-            font_size_simplified = 12;
-            font_size_colorbar = 12;
-            color_upper_limit = -5;
+            font_size_simplified = 17;
+            font_size_colorbar = 15;
+            color_upper_limit = -5; %-5 for sim, -10 for USRP
             color_lower_lim = 30;%use 49 for USRP case studies, 30 for Simulations
-            c_map = parula(6);
+            c_map = hot();
+%             c_map = parula(6);
 
             %tune colors to make it easier to see lower power levels
-            c_map(1,:) = c_map(1,:) * 0.75;
-            c_map(2,:) = c_map(3,:) * 0.85;
-            c_map(3,:) = c_map(3,:) * 1.1;
-            c_map(4,:) = c_map(4,:) * 1.1;
+%             c_map(1,:) = c_map(1,:) * 0.75;
+%             c_map(2,:) = c_map(3,:) * 0.85;
+%             c_map(3,:) = c_map(3,:) * 1.1;
+%             c_map(4,:) = c_map(4,:) * 1.1;
             
         
             %estimate the range and the velocities
@@ -437,7 +438,6 @@ classdef Radar_Signal_Processor_revA < handle
                     ax.LineWidth = 2.0;
 
                     if obj.simplify_plots
-                        colorbar off;
                         ax.FontSize = font_size_simplified;
                         xlabel("Velocity (m/s)","FontSize",font_size_simplified)
                         ylabel("Range (m)","FontSize",font_size_simplified)
@@ -445,11 +445,11 @@ classdef Radar_Signal_Processor_revA < handle
                         ax.FontSize = font_size;
                         xlabel("Velocity (m/s)","FontSize",font_size)
                         ylabel("Range (m)","FontSize",font_size)
-                        h = colorbar;
-                        h.FontSize = font_size_colorbar;
-                        h.Label.String = "Relative Power (dB)";
-                        h_label = h.Label;
                     end
+                    h = colorbar;
+                    h.FontSize = font_size_colorbar;
+                    h.Label.String = "Relative Power (dB)";
+                    h_label = h.Label;
                     drawnow
                     obj.F_rngdop(obj.Radar.current_frame) = getframe(gcf);
     
@@ -498,7 +498,6 @@ classdef Radar_Signal_Processor_revA < handle
 
                     
                     if obj.simplify_plots
-                        colorbar off;
                         ax.FontSize = font_size_simplified;
                         xlabel("Velocity (m/s)","FontSize",font_size_simplified)
                         ylabel("Range (m)","FontSize",font_size_simplified)
@@ -506,11 +505,11 @@ classdef Radar_Signal_Processor_revA < handle
                         xlabel("Velocity (m/s)","FontSize",font_size)
                         ylabel("Range (m)","FontSize",font_size)
                         ax.FontSize = font_size;
-                        h = colorbar;
-                        h.FontSize = font_size_colorbar;
-                        h.Label.String = "Relative Power (dB)";
-                        h_label = h.Label;
                     end
+                    h = colorbar;
+                    h.FontSize = font_size_colorbar;
+                    h.Label.String = "Relative Power (dB)";
+                    h_label = h.Label;
                     drawnow
                     obj.F_rngdop(obj.Radar.current_frame) = getframe(gcf);
     
