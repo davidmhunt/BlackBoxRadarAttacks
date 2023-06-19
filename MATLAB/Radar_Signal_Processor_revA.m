@@ -399,7 +399,7 @@ classdef Radar_Signal_Processor_revA < handle
             font_size_simplified = 17;
             font_size_colorbar = 15;
             color_upper_limit = -5; %-5 for sim, -10 for USRP
-            color_lower_lim = 30;%use 49 for USRP case studies, 30 for Simulations
+            color_lower_lim = 75;%use 49 for USRP case studies, 30 for Simulations
             c_map = hot();
 %             c_map = parula(6);
 

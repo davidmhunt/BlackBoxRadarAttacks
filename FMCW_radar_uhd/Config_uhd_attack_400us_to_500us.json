@@ -27,7 +27,7 @@
             "enabled":true,
             "spb":2040,
             "spp":0,
-            "gain":30,
+            "gain":35,
             "ant":"RX2",
             "subdev":"A:A A:B",
             "channel":0,
@@ -73,8 +73,8 @@
         "FP_spoof_enable":true,
         "FP_spoof_realistic_movement_enabled": true,
         "FP_spoof_power_scaling_enabled":true,
-        "FP_spoof_distances_m": [100],
-        "FP_spoof_vels_m_s": [15],
+        "FP_spoof_distances_m": [50],
+        "FP_spoof_vels_m_s": [5],
         "FN_spoof_enable": true,
         "FN_spoof_realistic_movement_enabled": true,
         "FN_spoof_distance_m": 50,
@@ -82,7 +82,7 @@
         "sim_vel_attack_enable":true,
         "sim_slope_attack_enable":true,
         "jamming":{
-            "jam_on_parameter_randomization":true,
+            "jam_on_parameter_randomization":false,
             "jamming_range_span_m":2000
         },
         "debug":true
