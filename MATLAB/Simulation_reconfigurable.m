@@ -16,7 +16,7 @@ classdef Simulation_reconfigurable < handle
             json_config_file = sim_config.TestSettings.Configurations.json_config;
             obj.frames_to_compute = sim_config.TestSettings.Configurations.frames_per_sim;
 
-            david_file_path = "/home/david/Documents/RadarSecurityResearch/MATLAB/Simulink Model/config_files/";
+            david_file_path = "/home/david/Documents/BlackBoxRadarAttacks/MATLAB/config_files/";
             kristen_file_path = "/home/kristenangell/Documents/RadarSecurityResearch/MATLAB/Simulink Model/config_files/";
             windows_file_path = "C:\Users\Operator\Documents\RadarSecurityResearch\MATLAB\Simulink Model\config_files\";
 
@@ -50,18 +50,24 @@ classdef Simulation_reconfigurable < handle
             obj.simulator.load_realistic_attacker_and_victim_position_and_velocity();
 
             %print out key parameters
-            obj.simulator.Victim.print_chirp_parameters;
-
-            obj.simulator.Victim.print_frame_parameters;
-            %log detection first, then log all the data about it
-            obj.simulator.Victim.print_performance_specs;
-            obj.simulator.Victim.print_FMCW_specs;
+            %obj.simulator.Victim.print_chirp_parameters;
+% 
+%             obj.simulator.Victim.print_frame_parameters;
+%             %log detection first, then log all the data about it
+%             obj.simulator.Victim.print_performance_specs;
+%             obj.simulator.Victim.print_FMCW_specs;
 
             obj.simulator.load_target_realistic(target_start, target_velocity);
 
             %specify whether or not to record a move of the range-doppler plot
             record_movie = false;
-            obj.simulator.Victim.Radar_Signal_Processor.configure_movie_capture(obj.frames_to_compute,record_movie,0,0,80); %no need to zoom as video is disabled
+            range_lims = [0,150];
+            vel_lims = [-50,50];
+            vel_exclusion_region = [-0.1,0.1];
+            frame_period_ms = obj.simulator.Victim.FramePeriodicity_ms;
+            enable_simplified_plots = false;
+            obj.simulator.Victim.Radar_Signal_Processor.configure_movie_capture(obj.frames_to_compute, ...
+                record_movie,range_lims,vel_lims,vel_exclusion_region,enable_simplified_plots);
 
             %pre-compute the victim's chirps
             obj.simulator.Victim.precompute_radar_chirps();
@@ -92,10 +98,19 @@ classdef Simulation_reconfigurable < handle
 
                 %if it is desired to specify a specific attack location
                 if obj.sim_config.TestSettings.Configurations.set_attack_location
-                    attack_position = obj.sim_config.TestSettings.Configurations.attack_pos;
-                    attack_velocity = obj.sim_config.TestSettings.Configurations.attack_velocity;
+%                     attack_position = obj.sim_config.TestSettings.Configurations.attack_pos;
+%                     attack_velocity = obj.sim_config.TestSettings.Configurations.attack_velocity;
+% 
+%                     obj.simulator.Attacker.Subsystem_attacking.set_desired_attack_location(attack_position,attack_velocity);
 
+                      valid_ranges = [50,100];
+                    valid_velocities = [-25,25];
+                    attack_position = rand * (valid_ranges(2) - valid_ranges(1)) + valid_ranges(1);
+
+                    %select a random velocity
+                    attack_velocity = rand * (valid_velocities(2) - valid_velocities(1)) + valid_velocities(1);
                     obj.simulator.Attacker.Subsystem_attacking.set_desired_attack_location(attack_position,attack_velocity);
+                
                 end
                 
 

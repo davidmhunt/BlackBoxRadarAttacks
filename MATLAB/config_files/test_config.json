@@ -2,19 +2,19 @@
     {
         "Configurations": {
             "user":"david",
-            "json_config": "100MHz.json",
+            "json_config": "20MHz.json",
             "frames_per_sim": 10,
-            "attack_type": "range spoof - similar slope, velocity spoof - noisy",
+            "attack_type": "target",
             "num_runs": 400,
             "pre_attack_frames": 5,
-            "k_range" : 6.24,
-            "k_vel" : 0.93,
+            "k_range" : 22.47,
+            "k_vel" : 1.86,
             "max_bin": 30,
             "bin_width": 5,
             "attack_enable": 1,
-            "set_attack_location": 0,
-            "attack_pos": 75,
-            "attack_velocity": 7
+            "set_attack_location": 1,
+            "attack_pos": 50,
+            "attack_velocity": -5
 
         }
     }
