@@ -373,11 +373,11 @@ classdef Subsystem_attacking  < handle
 
         function scaling_val = compute_power_scaling(obj)
             if contains(obj.attack_mode,"target")
-                if obj.desired_range_m < obj.Attacker.current_victim_pos
+                if obj.desired_range_m < obj.Attacker.current_
                     scaling_val = 1.0 * 1e-2;
                     return;
                 else
-                    loss_attacker = 1 / (4 * pi * obj.Attacker.current_victim_pos^(2));
+                    loss_attacker = 1 / (4 * pi * obj.Attacker.current_target_pos^(2));
                     loss_spoofing = 1/ (4 * pi * obj.desired_range_m^(2));
                     scaling_val = loss_spoofing / loss_attacker * 1e-2;
                     return;
@@ -433,7 +433,7 @@ classdef Subsystem_attacking  < handle
             time_delay = desired_time_delay - propagation_delay;
             num_samples_delay = round(time_delay * (obj.Attacker.FMCW_sample_rate_Msps * 1e6));
             
-            scaling_val = obj.compute_power_scaling();
+            scaling_val = 1;%obj.compute_power_scaling();
             
             for chirp = 1:int32(obj.chirps_to_compute)
                 %compute the phase shift

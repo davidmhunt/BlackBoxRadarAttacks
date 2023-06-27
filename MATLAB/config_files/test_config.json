@@ -2,13 +2,13 @@
     {
         "Configurations": {
             "user":"david",
-            "json_config": "20MHz.json",
+            "json_config": "1GHz.json",
             "frames_per_sim": 10,
             "attack_type": "target",
             "num_runs": 400,
             "pre_attack_frames": 5,
-            "k_range" : 22.47,
-            "k_vel" : 1.86,
+            "k_range" : 0.63,
+            "k_vel" : 1.05,
             "max_bin": 30,
             "bin_width": 5,
             "attack_enable": 1,
